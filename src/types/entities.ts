@@ -72,6 +72,26 @@ export interface GtRepo {
   prsLastWeek: number;
   trendingPct: number;
   lastPrAt: string | null;
+  /** Local DB count of pulls where state='open' and draft=0. */
+  openPrCount: number;
+  /** Local DB count of issues where state='open'. */
+  openIssueCount: number;
+  /** Excessive-PR penalty threshold from SN74 policy. Null when unknown. */
+  excessivePrPenaltyThreshold: number | null;
+  /** Daily merged-PR counts, oldest-first, length 14. UTC day buckets ending today. */
+  mergedPrSeries14d: number[];
+  /** Per-label scoring multipliers from SN74 policy. Null when unknown. */
+  labelMultipliers: Record<string, number> | null;
+  /** Fraction of emission allocated to issue discovery. Null when unknown. */
+  issueDiscoveryShare: number | null;
+  /** Fraction of emission reserved for registered maintainers. Null when unknown. */
+  maintainerCut: number | null;
+  /** Minimum PR credibility required for rewards. Null when unknown. */
+  minCredibility: number | null;
+  /** Whether scoring-label application is trusted. Null when unknown. */
+  trustedLabelPipeline: boolean | null;
+  /** GitHub stargazer count. Null when the repo is unreachable/private. */
+  stars: number | null;
 }
 
 /** Recent-PR summary attached to the GtRepos response. */
@@ -95,6 +115,20 @@ export interface GtReposResponse {
   count: number;
   activeCount: number;
   inactiveCount: number;
+  /** Sum of active-repo weights (≈ fraction of network emission flowing to active repos). */
+  totalEmissionWeight: number;
+  /** Network-level PRs merged in the last 7d. */
+  prsMergedThisWeek: number;
+  /** Network-level PRs merged 7–14d ago (for WoW delta). */
+  prsMergedLastWeek: number;
+  /** Distinct authors of PRs merged in the last 7d. */
+  uniqueContributors7d: number;
+  /** Distinct authors of PRs merged 7–14d ago (for WoW delta). */
+  uniqueContributorsPriorWeek: number;
+  /** Sum of score across PRs merged in the last 7d. */
+  scoreEarnedThisWeek: number;
+  /** Sum of score across PRs merged 7–14d ago (for WoW delta). */
+  scoreEarnedPriorWeek: number;
   repos: GtRepo[];
   recentPrs: GtPrSummary[];
   prs?: GtPrSummary[];

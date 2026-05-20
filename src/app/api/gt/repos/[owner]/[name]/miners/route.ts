@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { RepoMiner, RepoMinersResponse } from '@/types/entities';
 import { getReadDb } from '@/lib/db';
 import { backfillPrIssueLinksIfNeeded } from '@/lib/refresh';
 
@@ -52,6 +53,35 @@ async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(15_000) });
   if (!response.ok) throw new Error(`upstream ${url} ${response.status}`);
   return response.json() as Promise<T>;
+}
+
+function localContributorsForRepo(fullName: string): RepoMiner[] {
+  try {
+    const rows = getReadDb()
+      .prepare(
+        `SELECT author_login as author, COUNT(*) as prCount,
+                SUM(CASE WHEN merged = 1 THEN 1 ELSE 0 END) as mergedCount
+         FROM pulls
+         WHERE repo_full_name = ? COLLATE NOCASE AND author_login IS NOT NULL AND author_login != ''
+         GROUP BY author_login
+         ORDER BY mergedCount DESC, prCount DESC
+         LIMIT ?`,
+      )
+      .all(fullName, TOP_MINERS_LIMIT) as Array<{ author: string; prCount: number; mergedCount: number }>;
+    return rows.map((r) => ({
+      githubId: '',
+      githubUsername: r.author,
+      // Match the upstream semantic: prCount in `ossContributions` is merged
+      // PR count. Surface mergedCount when we have it, falling back to total.
+      prCount: r.mergedCount ?? r.prCount,
+      score: 0,
+      ossRank: null,
+      globalScore: null,
+      avatarUrl: `https://github.com/${r.author}.png?size=48`,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 function issueDiscoveryReason(row: {
@@ -132,7 +162,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ owner: string;
         row.score += num(p.score);
       }
     }
-    const ossContributions = [...ossMap.values()]
+    let ossContributions: RepoMiner[] = [...ossMap.values()]
       .filter((r) => r.prCount > 0 || r.score > 0)
       .sort((a, b) => b.score - a.score || b.prCount - a.prCount)
       .slice(0, TOP_MINERS_LIMIT)
@@ -149,6 +179,14 @@ export async function GET(_req: Request, ctx: { params: Promise<{ owner: string;
           avatarUrl: `https://github.com/${username}.png?size=48`,
         };
       });
+
+    // Fallback: when upstream has no scored PRs for this repo (newer repos,
+    // unscored backlogs), surface contributors from the local pulls cache
+    // ranked by PR count. Score is 0 — clients can read that as "no scoring
+    // data yet" and the UI already handles the muted-zero case.
+    if (ossContributions.length === 0) {
+      ossContributions = localContributorsForRepo(fullName);
+    }
 
     // Issue Discoveries: repo-specific candidates only. Gittensor scores a
     // subset of solved issues: same-author issue/PR pairs and sibling issues

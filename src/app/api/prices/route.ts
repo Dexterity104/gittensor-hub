@@ -6,6 +6,8 @@ interface Cached {
   tao_usd: number;
   alpha_tao: number;
   alpha_usd: number;
+  /** Network-wide TAO emitted per day on SN74 — sum of miners' taoPerDay. */
+  tao_per_day: number;
   fetched_at: number; // epoch ms
 }
 
@@ -28,26 +30,35 @@ async function fetchTaoUsd(): Promise<number | null> {
   }
 }
 
-async function fetchSn74Rates(): Promise<{ tao_usd: number | null; alpha_tao: number | null; alpha_usd: number | null }> {
+interface Sn74Rates {
+  tao_usd: number | null;
+  alpha_tao: number | null;
+  alpha_usd: number | null;
+  tao_per_day: number;
+}
+
+async function fetchSn74Rates(): Promise<Sn74Rates> {
   // The gittensor miners endpoint already encodes the live conversion in
   // each row's alphaPerDay / taoPerDay / usdPerDay — average across miners
-  // that have all three populated.
+  // that have all three populated, and sum taoPerDay for network emission.
   try {
     const r = await fetch('https://api.gittensor.io/miners', {
       cache: 'no-store',
       signal: AbortSignal.timeout(8_000),
     });
-    if (!r.ok) return { tao_usd: null, alpha_tao: null, alpha_usd: null };
+    if (!r.ok) return { tao_usd: null, alpha_tao: null, alpha_usd: null, tao_per_day: 0 };
     const miners = (await r.json()) as Array<{
       alphaPerDay?: number;
       taoPerDay?: number;
       usdPerDay?: number;
     }>;
     let nT = 0, sT = 0, nA = 0, sA = 0, nU = 0, sU = 0;
+    let tao_per_day = 0;
     for (const m of miners) {
       const a = m.alphaPerDay ?? 0;
       const t = m.taoPerDay ?? 0;
       const u = m.usdPerDay ?? 0;
+      tao_per_day += t;
       if (t > 0 && u > 0) { sT += u / t; nT++; }
       if (a > 0 && t > 0) { sA += t / a; nA++; }
       if (a > 0 && u > 0) { sU += u / a; nU++; }
@@ -56,9 +67,10 @@ async function fetchSn74Rates(): Promise<{ tao_usd: number | null; alpha_tao: nu
       tao_usd: nT > 0 ? sT / nT : null,
       alpha_tao: nA > 0 ? sA / nA : null,
       alpha_usd: nU > 0 ? sU / nU : null,
+      tao_per_day,
     };
   } catch {
-    return { tao_usd: null, alpha_tao: null, alpha_usd: null };
+    return { tao_usd: null, alpha_tao: null, alpha_usd: null, tao_per_day: 0 };
   }
 }
 
@@ -69,7 +81,7 @@ async function refresh(): Promise<Cached> {
   // Alpha price: prefer the alpha_usd directly; otherwise compute from alpha_tao × tao_usd.
   const alpha_tao = sn74.alpha_tao ?? 0;
   const alpha_usd = sn74.alpha_usd ?? (alpha_tao && tao_usd ? alpha_tao * tao_usd : 0);
-  const next: Cached = { tao_usd, alpha_tao, alpha_usd, fetched_at: Date.now() };
+  const next: Cached = { tao_usd, alpha_tao, alpha_usd, tao_per_day: sn74.tao_per_day, fetched_at: Date.now() };
   cache = next;
   return next;
 }
@@ -93,7 +105,7 @@ export async function GET() {
       return NextResponse.json({ ...cache, source: 'stale', error: String(err) });
     }
     return NextResponse.json(
-      { tao_usd: 0, alpha_tao: 0, alpha_usd: 0, fetched_at: now, error: String(err) },
+      { tao_usd: 0, alpha_tao: 0, alpha_usd: 0, tao_per_day: 0, fetched_at: now, error: String(err) },
       { status: 502 },
     );
   }
