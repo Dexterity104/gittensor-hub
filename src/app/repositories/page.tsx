@@ -21,7 +21,7 @@ import {
 } from '@primer/octicons-react';
 import { SkeletonBar } from '@/components/Skeleton';
 import { isTracked as repoIsTracked, useTrackedRepos } from '@/lib/tracked-repos';
-import { formatRelativeTime, formatCount, formatPercent, formatUsd, formatTao } from '@/lib/format';
+import { formatRelativeTime, formatCount, formatPercent, formatUsd, formatTao, formatWeightPct } from '@/lib/format';
 import type { GtRepo, GtReposResponse, RepoMinersResponse, GtRepoPrsResponse } from '@/types/entities';
 
 const STALE_PR_MS = 14 * 24 * 60 * 60 * 1000;
@@ -465,7 +465,7 @@ export default function RepositoriesPage() {
                 return (
                   <Box sx={{ textAlign: 'right' }}>
                     <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'fg.default' }}>
-                      {r.weight.toFixed(2)}
+                      {formatWeightPct(r.weight)}
                     </Text>
                     <Text
                       sx={{ display: 'block', fontSize: 0, color: 'fg.muted' }}
@@ -501,7 +501,7 @@ export default function RepositoriesPage() {
               renderRight={(r) => (
                 <Box sx={{ textAlign: 'right' }}>
                   <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'fg.default' }}>
-                    {r.weight.toFixed(2)}
+                    {formatWeightPct(r.weight)}
                   </Text>
                   <Text sx={{ display: 'block', fontSize: 0, color: 'fg.muted' }}>
                     {r.lastPrAt ? formatRelativeTime(r.lastPrAt) : 'never'}
@@ -714,7 +714,7 @@ function NetworkKpiStrip({
       >
         <SupportCell
           label="Emission · Daily"
-          hint="Daily TAO emission flowing to tracked repos at the current network weight, with USD equivalent."
+          hint="Daily TAO going to miners on tracked repos (excludes the ~10% issue treasury), with USD equivalent."
           value={taoPerDay != null ? formatTao(taoPerDay) : formatPercent(weight, { scale: 100 })}
           sub={
             usdPerDay != null
@@ -1261,7 +1261,7 @@ function RepoCard({
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: 2, color: 'fg.default', lineHeight: 1.1 }}>
-              {r.weight.toFixed(2)}
+              {formatWeightPct(r.weight)}
             </Text>
             <Box sx={{ width: '100%', height: 3, bg: 'canvas.inset', borderRadius: 999, overflow: 'hidden' }}>
               <Box sx={{ height: '100%', bg: 'accent.emphasis' }} style={{ width: `${Math.min(100, Math.max(0, r.weight * 100))}%` }} />
@@ -1270,7 +1270,7 @@ function RepoCard({
         </RepoCell>
         <RepoCell
           label="Emission · Daily"
-          hint="Daily TAO emission for this repo at current weight, with USD equivalent."
+          hint="Daily TAO going to miners on this repo (excludes the ~10% issue treasury), with USD equivalent."
         >
           {taoPerDay == null ? (
             <Text sx={{ color: 'fg.muted', fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontSize: 2 }}>—</Text>
@@ -1484,7 +1484,7 @@ function RepoTable({
               current={sortKey}
               dir={sortDir}
               onSort={onSort}
-              hint="Daily TAO emission for this repo at current weight, with USD equivalent."
+              hint="Daily TAO going to miners on this repo (excludes the ~10% issue treasury), with USD equivalent."
             >
               Emission/d
             </Th>
@@ -1654,7 +1654,7 @@ function RepoTable({
                   <Box as="td" sx={{ p: 2, textAlign: 'right', verticalAlign: 'middle', minWidth: 90 }}>
                     <Box sx={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch', minWidth: 70, gap: '4px' }}>
                       <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'fg.default' }}>
-                        {r.weight.toFixed(2)}
+                        {formatWeightPct(r.weight)}
                       </Text>
                       <Box sx={{ width: '100%', height: 3, bg: 'canvas.inset', borderRadius: 999, overflow: 'hidden' }}>
                         <Box sx={{ height: '100%', bg: 'accent.emphasis' }} style={{ width: `${Math.min(100, Math.max(0, r.weight * 100))}%` }} />
