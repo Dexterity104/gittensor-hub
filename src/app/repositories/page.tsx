@@ -23,25 +23,15 @@ import {
 import Dropdown from '@/components/Dropdown';
 import { SkeletonBar } from '@/components/Skeleton';
 import { isTracked as repoIsTracked, useTrackedRepos } from '@/lib/tracked-repos';
-import { formatRelativeTime, formatCount, formatPercent, formatUsd, formatTao, formatWeight } from '@/lib/format';
+import { formatRelativeTime, formatCount, formatUsd, formatTao, formatWeight } from '@/lib/format';
 import type { GtRepo, GtReposResponse, RepoMinersResponse, GtRepoPrsResponse } from '@/types/entities';
 
 const STALE_PR_MS = 14 * 24 * 60 * 60 * 1000;
 const STALE_MIN_WEIGHT = 0.01;
 const OPPORTUNITY_LIMIT = 5;
 
-// prices.tao_per_day is realized OSS-miner TAO only (excludes treasury+recycle
-// UIDs), and registry shares don't sum to 1. Per-repo TAO must normalize by
-// totalShare; `share × tao_per_day` directly is wrong.
-function emissionForWeight(
-  share: number,
-  totalShare: number,
-  prices: PricesResponse | undefined,
-): { tao: number | null; usd: number | null } {
-  const tao =
-    share > 0 && totalShare > 0 && prices && prices.tao_per_day > 0
-      ? (share / totalShare) * prices.tao_per_day
-      : null;
+function emissionForWeight(share: number, totalShare: number, prices: PricesResponse | undefined): { tao: number | null; usd: number | null } {
+  const tao = share > 0 && totalShare > 0 && prices && prices.tao_per_day > 0 ? (share / totalShare) * prices.tao_per_day : null;
   const usd = tao != null && prices && prices.tao_usd > 0 ? tao * prices.tao_usd : null;
   return { tao, usd };
 }
@@ -70,9 +60,6 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 ];
 
 function capacityUtilization(r: GtRepo): number {
-  // Gittensor's open-PR pressure is per miner within a repo. Use the busiest
-  // author's open PR count against the base threshold instead of averaging
-  // across contributors, which can hide a single overloaded author.
   const thr = r.excessivePrPenaltyThreshold ?? 0;
   if (thr <= 0) return 0;
   return r.openPrMaxByAuthor / thr;
@@ -82,9 +69,6 @@ function avatarUrl(owner: string): string {
   return `https://github.com/${owner}.png?size=48`;
 }
 
-// True only for activation on a nested interactive element, not the row
-// itself (which carries role="button"). Used to skip row expand/collapse
-// when the user clicks the repo link or star button.
 function isInteractiveTarget(e: { target: EventTarget | null; currentTarget: EventTarget | null }): boolean {
   if (!(e.target instanceof Element) || !(e.currentTarget instanceof Element)) return false;
   const nearest = e.target.closest('a, button, input, select, textarea, [role="button"]');
@@ -127,8 +111,6 @@ export default function RepositoriesPage() {
     if (!data?.repos) return [] as GtRepo[];
     const q = query.trim().toLowerCase();
     let list = data.repos.filter((r) => {
-      // "Active" matches the KPI: isActive AND weight > 0. Zero-weight repos
-      // fall under "Inactive" even when SN74 hasn't deprioritized them yet.
       const isEarning = r.isActive && r.weight > 0;
       if (status === 'active' && !isEarning) return false;
       if (status === 'inactive' && isEarning) return false;
@@ -156,9 +138,6 @@ export default function RepositoriesPage() {
     const empty = { underutilized: [] as GtRepo[], openWork: [] as GtRepo[], goingStale: [] as GtRepo[] };
     if (!data?.repos) return empty;
     const active = data.repos.filter((r) => r.isActive);
-
-    // Threshold is per miner. Repos without a configured threshold are skipped
-    // because headroom is unknowable.
     const utilization = (r: GtRepo): number | null => {
       const thr = r.excessivePrPenaltyThreshold;
       if (thr == null || thr <= 0) return null;
@@ -170,12 +149,10 @@ export default function RepositoriesPage() {
       .sort((a, b) => b.r.weight / Math.max(b.u!, 0.05) - a.r.weight / Math.max(a.u!, 0.05))
       .slice(0, OPPORTUNITY_LIMIT)
       .map(({ r }) => r);
-
     const openWork = [...active]
       .filter((r) => r.openIssueCount > 0)
       .sort((a, b) => b.openIssueCount - a.openIssueCount)
       .slice(0, OPPORTUNITY_LIMIT);
-
     const staleCutoff = Date.now() - STALE_PR_MS;
     const goingStale = active
       .filter((r) => {
@@ -189,17 +166,12 @@ export default function RepositoriesPage() {
         return at - bt;
       })
       .slice(0, OPPORTUNITY_LIMIT);
-
     return { underutilized, openWork, goingStale };
   }, [data]);
 
-  // Global so the WeightBar scale doesn't shift per page.
   const maxActiveWeight = useMemo(() => {
     if (!data?.repos) return 0;
-    return data.repos.reduce(
-      (m, r) => (r.isActive && Number.isFinite(r.weight) && r.weight > m ? r.weight : m),
-      0,
-    );
+    return data.repos.reduce((m, r) => (r.isActive && Number.isFinite(r.weight) && r.weight > m ? r.weight : m), 0);
   }, [data]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -211,41 +183,10 @@ export default function RepositoriesPage() {
     <PageLayout containerWidth="full" padding="normal">
       <PageLayout.Content>
         <NetworkKpiStrip data={data} prices={prices} />
-
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: ['column', null, null, 'row'],
-            alignItems: 'flex-start',
-            gap: 2,
-          }}
-        >
-          {/* Main column */}
+        <Box sx={{ display: 'flex', flexDirection: ['column', null, null, 'row'], alignItems: 'flex-start', gap: 2 }}>
           <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
-        {/* Toolbar — Linear-style control rail: quiet surface, soft controls. */}
-        <Box
-          sx={{
-            border: '1px solid',
-            borderColor: 'border.muted',
-            borderRadius: 2,
-            bg: 'canvas.subtle',
-            px: 2,
-            py: '7px',
-            mb: 2,
-            boxShadow: 'inset 0 1px 0 var(--border-subtle)',
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              // Single-row toolbar from sm (≥544px) up. Below that, search drops to its
-              // own row but tabs + row-count stay inline so the toolbar isn't a tall column.
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 2,
-              flexWrap: 'wrap',
-            }}
-          >
+        <Box sx={{ border: '1px solid', borderColor: 'border.muted', borderRadius: 2, bg: 'canvas.subtle', px: 2, py: '7px', mb: 2, boxShadow: 'inset 0 1px 0 var(--border-subtle)' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, maxWidth: '100%', overflowX: 'auto' }}>
               <StatusTab active={status === 'all'} onClick={() => { setStatus('all'); setPage(1); }} label="All" count={data?.count} />
               <StatusTab active={status === 'active'} onClick={() => { setStatus('active'); setPage(1); }} label="Active" count={data?.activeCount} />
@@ -256,10 +197,7 @@ export default function RepositoriesPage() {
               <Text sx={{ color: 'fg.muted' }}>Sort:</Text>
               <Dropdown
                 value={sortKey}
-                onChange={(v) => {
-                  setSortKey(v as SortKey);
-                  setPage(1);
-                }}
+                onChange={(v) => { setSortKey(v as SortKey); setPage(1); }}
                 options={SORT_OPTIONS.map((o) => ({ value: o.key, label: o.label }))}
                 width={156}
                 size="small"
@@ -271,46 +209,27 @@ export default function RepositoriesPage() {
                 aria-label={sortDir === 'desc' ? 'Sort descending' : 'Sort ascending'}
                 title={sortDir === 'desc' ? 'Descending' : 'Ascending'}
                 sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 28,
-                  height: 28,
-                  bg: 'neutral.subtle',
-                  color: 'fg.default',
-                  border: '1px solid',
-                  borderColor: 'border.subtle',
-                  borderRadius: 1,
-                  cursor: 'pointer',
-                  outline: 'none',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28,
+                  bg: 'neutral.subtle', color: 'fg.default', border: '1px solid', borderColor: 'border.subtle', borderRadius: 1,
+                  cursor: 'pointer', outline: 'none',
                   '&:hover': { bg: 'neutral.muted', borderColor: 'border.muted' },
-                  '&:focus-visible': {
-                    borderColor: 'accent.muted',
-                    boxShadow: '0 0 0 2px var(--accent-subtle)',
-                  },
+                  '&:focus-visible': { borderColor: 'accent.muted', boxShadow: '0 0 0 2px var(--accent-subtle)' },
                 }}
               >
                 {sortDir === 'desc' ? <ArrowDownIcon size={14} /> : <ArrowUpIcon size={14} />}
               </Box>
             </Box>
-
-            {/* Pushes Rows + Search to the right edge on wide viewports.
-                On narrow viewports they wrap below tabs/sort naturally. */}
             <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, color: 'fg.muted', fontSize: 1, ml: ['0', 'auto'] }}>
               <Text sx={{ color: 'fg.muted' }}>Rows:</Text>
               <Dropdown
                 value={String(pageSize)}
-                onChange={(v) => {
-                  setPageSize(Number(v));
-                  setPage(1);
-                }}
+                onChange={(v) => { setPageSize(Number(v)); setPage(1); }}
                 options={PAGE_SIZES.map((n) => ({ value: String(n), label: String(n) }))}
                 width={72}
                 size="small"
                 ariaLabel="Rows per page"
               />
             </Box>
-
             <Box sx={{ minWidth: 200, width: ['100%', 240] }}>
               <TextInput
                 leadingVisual={SearchIcon}
@@ -318,20 +237,10 @@ export default function RepositoriesPage() {
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); }}
                 sx={{
-                  width: '100%',
-                  minHeight: 32,
-                  bg: 'neutral.subtle',
-                  borderColor: 'border.subtle',
-                  color: 'fg.default',
-                  boxShadow: 'none',
-                  '& input': { color: 'fg.default' },
-                  '& svg': { color: 'fg.muted' },
+                  width: '100%', minHeight: 32, bg: 'neutral.subtle', borderColor: 'border.subtle', color: 'fg.default', boxShadow: 'none',
+                  '& input': { color: 'fg.default' }, '& svg': { color: 'fg.muted' },
                   '&:hover': { bg: 'neutral.muted', borderColor: 'border.muted' },
-                  '&:focus-within': {
-                    bg: 'neutral.subtle',
-                    borderColor: 'accent.muted',
-                    boxShadow: '0 0 0 2px var(--accent-subtle)',
-                  },
+                  '&:focus-within': { bg: 'neutral.subtle', borderColor: 'accent.muted', boxShadow: '0 0 0 2px var(--accent-subtle)' },
                 }}
               />
             </Box>
@@ -346,32 +255,14 @@ export default function RepositoriesPage() {
         {isLoading && !data && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {Array.from({ length: 6 }).map((_, i) => (
-              <Box
-                key={i}
-                sx={{
-                  border: '1px solid',
-                  borderColor: 'border.muted',
-                  borderRadius: 2,
-                  bg: 'canvas.subtle',
-                  overflow: 'hidden',
-                }}
-              >
+              <Box key={i} sx={{ border: '1px solid', borderColor: 'border.muted', borderRadius: 2, bg: 'canvas.subtle', overflow: 'hidden' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 3, py: '12px' }}>
                   <SkeletonBar width={14} />
                   <SkeletonBar width={28} />
                   <Box sx={{ width: 22, height: 22, borderRadius: '50%', bg: 'canvas.inset' }} />
                   <SkeletonBar width={180} />
                 </Box>
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: ['repeat(2, 1fr)', 'repeat(3, 1fr)', 'repeat(6, 1fr)'],
-                    gap: '1px',
-                    bg: 'border.muted',
-                    borderTop: '1px solid',
-                    borderColor: 'border.muted',
-                  }}
-                >
+                <Box sx={{ display: 'grid', gridTemplateColumns: ['repeat(2, 1fr)', 'repeat(3, 1fr)', 'repeat(6, 1fr)'], gap: '1px', bg: 'border.muted', borderTop: '1px solid', borderColor: 'border.muted' }}>
                   {Array.from({ length: 6 }).map((_, j) => (
                     <Box key={j} sx={{ bg: 'canvas.subtle', px: 3, py: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <SkeletonBar width={60} />
@@ -386,7 +277,6 @@ export default function RepositoriesPage() {
 
         {data && (
           <>
-            {/* Below lg: card view (vertical stack, no horizontal scroll). */}
             <Box sx={{ display: ['block', null, null, 'none'] }}>
               <RepoCardList
                 rows={pageItems}
@@ -397,12 +287,9 @@ export default function RepositoriesPage() {
                 totalEmissionWeight={data?.totalEmissionWeight ?? 0}
                 maxActiveWeight={maxActiveWeight}
                 expandedRepo={expandedRepo}
-                onToggleExpand={(fullName) =>
-                  setExpandedRepo((cur) => (cur === fullName ? null : fullName))
-                }
+                onToggleExpand={(fullName) => setExpandedRepo((cur) => (cur === fullName ? null : fullName))}
               />
             </Box>
-            {/* lg+: dense table view with sortable column headers. */}
             <Box sx={{ display: ['none', null, null, 'block'] }}>
               <RepoTable
                 rows={pageItems}
@@ -411,10 +298,7 @@ export default function RepositoriesPage() {
                 sortDir={sortDir}
                 onSort={(k) => {
                   if (k === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-                  else {
-                    setSortKey(k);
-                    setSortDir('desc');
-                  }
+                  else { setSortKey(k); setSortDir('desc'); }
                   setPage(1);
                 }}
                 tracked={tracked}
@@ -423,28 +307,14 @@ export default function RepositoriesPage() {
                 totalEmissionWeight={data?.totalEmissionWeight ?? 0}
                 maxActiveWeight={maxActiveWeight}
                 expandedRepo={expandedRepo}
-                onToggleExpand={(fullName) =>
-                  setExpandedRepo((cur) => (cur === fullName ? null : fullName))
-                }
+                onToggleExpand={(fullName) => setExpandedRepo((cur) => (cur === fullName ? null : fullName))}
               />
             </Box>
           </>
         )}
 
         {data && (
-          <Box
-            sx={{
-              mt: 2,
-              px: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: ['space-between', null, 'flex-end'],
-              gap: 2,
-              flexWrap: 'wrap',
-              color: 'fg.muted',
-              fontSize: 1,
-            }}
-          >
+          <Box sx={{ mt: 2, px: 1, display: 'flex', alignItems: 'center', justifyContent: ['space-between', null, 'flex-end'], gap: 2, flexWrap: 'wrap', color: 'fg.muted', fontSize: 1 }}>
             <Text>
               {filtered.length === 0
                 ? '0 of 0'
@@ -462,18 +332,7 @@ export default function RepositoriesPage() {
         )}
           </Box>
 
-          {/* Right sidebar — Opportunities */}
-          <Box
-            sx={{
-              width: ['100%', null, null, 320],
-              flexShrink: 0,
-              position: ['static', null, null, 'sticky'],
-              top: 16,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-            }}
-          >
+          <Box sx={{ width: ['100%', null, null, 320], flexShrink: 0, position: ['static', null, null, 'sticky'], top: 16, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <OpportunityCard
               title="Underutilized capacity"
               hint="High weight, below base per-author PR pressure"
@@ -538,65 +397,15 @@ export default function RepositoriesPage() {
 
 type AccentTone = 'success' | 'accent' | 'attention' | 'danger';
 
-function OpportunityCard({
-  title,
-  hint,
-  accent,
-  rows,
-  empty,
-  renderRight,
-}: {
-  title: string;
-  hint: string;
-  accent: AccentTone;
-  rows: GtRepo[];
-  empty: string;
-  renderRight: (r: GtRepo) => React.ReactNode;
+function OpportunityCard({ title, hint, accent, rows, empty, renderRight }: {
+  title: string; hint: string; accent: AccentTone; rows: GtRepo[]; empty: string; renderRight: (r: GtRepo) => React.ReactNode;
 }) {
   return (
-    <Box
-      sx={{
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        bg: 'canvas.subtle',
-        minWidth: 0,
-        overflow: 'hidden',
-      }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 2,
-          px: 3,
-          pt: 2,
-          pb: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.muted',
-        }}
-      >
-        <Box
-          aria-hidden
-          sx={{
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            bg: `${accent}.emphasis`,
-            mt: '6px',
-            flexShrink: 0,
-          }}
-        />
+    <Box sx={{ border: '1px solid', borderColor: 'border.default', borderRadius: 2, bg: 'canvas.subtle', minWidth: 0, overflow: 'hidden' }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, px: 3, pt: 2, pb: 2, borderBottom: '1px solid', borderColor: 'border.muted' }}>
+        <Box aria-hidden sx={{ width: 6, height: 6, borderRadius: '50%', bg: `${accent}.emphasis`, mt: '6px', flexShrink: 0 }} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Text
-            sx={{
-              display: 'block',
-              fontSize: 1,
-              fontWeight: 600,
-              color: 'fg.default',
-              lineHeight: 1.3,
-            }}
-          >
+          <Text sx={{ display: 'block', fontSize: 1, fontWeight: 600, color: 'fg.default', lineHeight: 1.3 }}>
             {title}
           </Text>
           <Text sx={{ display: 'block', fontSize: 0, color: 'fg.muted', mt: '2px' }}>{hint}</Text>
@@ -615,41 +424,12 @@ function OpportunityCard({
 
 function SidebarRepoRow({ repo, right }: { repo: GtRepo; right: React.ReactNode }) {
   return (
-    <Link
-      href={`/repos/${repo.owner}/${repo.name}`}
-      prefetch={false}
-      style={{ display: 'block', minWidth: 0, textDecoration: 'none' }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          minWidth: 0,
-          py: '6px',
-          px: 1,
-          borderRadius: 1,
-          '&:hover': { bg: 'canvas.default' },
-        }}
-      >
+    <Link href={`/repos/${repo.owner}/${repo.name}`} prefetch={false} style={{ display: 'block', minWidth: 0, textDecoration: 'none' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0, py: '6px', px: 1, borderRadius: 1, '&:hover': { bg: 'canvas.default' } }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={avatarUrl(repo.owner)}
-          alt={repo.owner}
-          loading="lazy"
-          style={{ width: 18, height: 18, borderRadius: '50%', border: '1px solid var(--border-muted)', flexShrink: 0 }}
-        />
+        <img src={avatarUrl(repo.owner)} alt={repo.owner} loading="lazy" style={{ width: 18, height: 18, borderRadius: '50%', border: '1px solid var(--border-muted)', flexShrink: 0 }} />
         <Text
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            color: 'fg.default',
-            fontWeight: 500,
-            fontSize: 0,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
+          sx={{ flex: 1, minWidth: 0, color: 'fg.default', fontWeight: 500, fontSize: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           title={repo.fullName}
         >
           {repo.fullName}
@@ -673,13 +453,7 @@ function formatLatencyHours(h: number): string {
   return `${(h / 24).toFixed(1)}d`;
 }
 
-function NetworkKpiStrip({
-  data,
-  prices,
-}: {
-  data: GtReposResponse | undefined;
-  prices: PricesResponse | undefined;
-}) {
+function NetworkKpiStrip({ data, prices }: { data: GtReposResponse | undefined; prices: PricesResponse | undefined }) {
   const activeCount = data?.activeCount ?? 0;
   const totalCount = data?.count ?? 0;
   const stakedCount = data?.stakedRepoCount ?? 0;
@@ -687,52 +461,26 @@ function NetworkKpiStrip({
   const top5Share = data?.top5WeightConcentration ?? 0;
   const taoUsd = prices?.tao_usd ?? 0;
   const change24h = prices?.tao_usd_change_24h ?? null;
-  // share=totalShare collapses (share/totalShare) to 1, yielding tao_per_day.
   const { tao: taoPerDay, usd: usdPerDay } = emissionForWeight(weight, weight, prices);
-
   const merged7d = data?.prsMergedThisWeek ?? 0;
   const mergedPrev = data?.prsMergedLastWeek ?? 0;
   const mergedDelta = merged7d - mergedPrev;
   const mergedSeries = data?.prsMergedSeries14d ?? [];
-
   const contributors7d = data?.uniqueContributors7d ?? 0;
   const contributorsPrev = data?.uniqueContributorsPriorWeek ?? 0;
   const contributorsDelta = contributors7d - contributorsPrev;
   const newC = data?.newContributors7d ?? 0;
   const retC = data?.returningContributors7d ?? 0;
-
   const score7d = data?.scoreEarnedThisWeek ?? 0;
   const scorePrev = data?.scoreEarnedPriorWeek ?? 0;
   const scoreDelta = Math.round(score7d - scorePrev);
-
   const lat7d = data?.medianMergeLatencyHours7d ?? 0;
   const latPrev = data?.medianMergeLatencyHoursPriorWeek ?? 0;
-  // Round to whole hours for the delta so a sub-hour difference does not
-  // render a misleading arrow.
   const latDeltaHours = Math.round(lat7d - latPrev);
 
   return (
-    <Box
-      sx={{
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        mb: 2,
-        overflow: 'hidden',
-      }}
-    >
-      {/* Single uniform grid — 2 cols xs, 4 cols sm/md/lg, 8 cols xl.
-          No hero, no two-tier hierarchy: every metric carries the same
-          weight, eliminating the dead space the giant headline number
-          created on wide screens. */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: ['repeat(2, 1fr)', 'repeat(4, 1fr)', null, null, 'repeat(8, 1fr)'],
-          gap: '1px',
-          bg: 'border.muted',
-        }}
-      >
+    <Box sx={{ border: '1px solid', borderColor: 'border.default', borderRadius: 2, mb: 2, overflow: 'hidden' }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: ['repeat(2, 1fr)', 'repeat(4, 1fr)', null, null, 'repeat(8, 1fr)'], gap: '1px', bg: 'border.muted' }}>
         <SupportCell
           label="Emission · Daily"
           hint="Daily TAO going to miners on tracked repos (excludes the ~10% issue treasury), with USD equivalent."
@@ -850,65 +598,17 @@ function NetworkKpiStrip({
   );
 }
 
-function SupportCell({
-  label,
-  hint,
-  value,
-  sub,
-}: {
-  label: string;
-  hint?: string;
-  value: React.ReactNode;
-  sub?: React.ReactNode;
-}) {
+function SupportCell({ label, hint, value, sub }: { label: string; hint?: string; value: React.ReactNode; sub?: React.ReactNode }) {
   return (
-    <Box
-      title={hint}
-      sx={{
-        bg: 'canvas.subtle',
-        px: 3,
-        py: '12px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
-        minWidth: 0,
-        cursor: hint ? 'help' : 'default',
-      }}
-    >
-      <Text
-        sx={{
-          fontSize: '10px',
-          fontWeight: 600,
-          letterSpacing: '0.6px',
-          color: 'fg.subtle',
-          textTransform: 'uppercase',
-          lineHeight: 1,
-        }}
-      >
+    <Box title={hint} sx={{ bg: 'canvas.subtle', px: 3, py: '12px', display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0, cursor: hint ? 'help' : 'default' }}>
+      <Text sx={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.6px', color: 'fg.subtle', textTransform: 'uppercase', lineHeight: 1 }}>
         {label}
       </Text>
-      <Text
-        sx={{
-          fontFamily: 'mono',
-          fontVariantNumeric: 'tabular-nums',
-          fontWeight: 700,
-          fontSize: 2,
-          color: 'fg.default',
-          lineHeight: 1.1,
-        }}
-      >
+      <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: 2, color: 'fg.default', lineHeight: 1.1 }}>
         {value}
       </Text>
       {sub != null && (
-        <Text
-          sx={{
-            fontSize: 0,
-            color: 'fg.muted',
-            fontFamily: 'mono',
-            fontVariantNumeric: 'tabular-nums',
-            lineHeight: 1.2,
-          }}
-        >
+        <Text sx={{ fontSize: 0, color: 'fg.muted', fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
           {sub}
         </Text>
       )}
@@ -916,15 +616,7 @@ function SupportCell({
   );
 }
 
-function DeltaIndicator({
-  value,
-  direction = 'up-is-good',
-  format,
-}: {
-  value: number;
-  direction?: 'up-is-good' | 'down-is-good';
-  format?: (abs: number) => string;
-}) {
+function DeltaIndicator({ value, direction = 'up-is-good', format }: { value: number; direction?: 'up-is-good' | 'down-is-good'; format?: (abs: number) => string }) {
   if (value === 0) {
     return (
       <Text sx={{ color: 'fg.muted', fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontSize: 0, fontWeight: 600 }}>
@@ -937,18 +629,7 @@ function DeltaIndicator({
   const Icon = up ? ArrowUpIcon : ArrowDownIcon;
   const abs = Math.abs(value);
   return (
-    <Box
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '2px',
-        color: isGood ? 'success.fg' : 'danger.fg',
-        fontFamily: 'mono',
-        fontVariantNumeric: 'tabular-nums',
-        fontSize: 0,
-        fontWeight: 700,
-      }}
-    >
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '2px', color: isGood ? 'success.fg' : 'danger.fg', fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontSize: 0, fontWeight: 700 }}>
       <Icon size={12} />
       {format ? format(abs) : abs}
     </Box>
@@ -967,49 +648,20 @@ function DetailErrorHint({ children }: { children: React.ReactNode }) {
   );
 }
 
-function StatusTab({
-  active,
-  onClick,
-  label,
-  count,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  count?: number;
-}) {
+function StatusTab({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count?: number }) {
   return (
     <Box
       as="button"
       onClick={onClick}
       sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 1,
-        px: 2,
-        py: '3px',
-        border: '1px solid',
-        borderColor: active ? 'accent.muted' : 'transparent',
-        borderRadius: 1,
-        bg: active ? 'accent.subtle' : 'transparent',
-        color: active ? 'fg.default' : 'fg.muted',
-        fontSize: 1,
-        fontWeight: active ? 600 : 500,
-        flexShrink: 0,
-        cursor: 'pointer',
-        fontFamily: 'inherit',
-        minHeight: 28,
-        outline: 'none',
+        display: 'inline-flex', alignItems: 'center', gap: 1, px: 2, py: '3px',
+        border: '1px solid', borderColor: active ? 'accent.muted' : 'transparent', borderRadius: 1,
+        bg: active ? 'accent.subtle' : 'transparent', color: active ? 'fg.default' : 'fg.muted',
+        fontSize: 1, fontWeight: active ? 600 : 500, flexShrink: 0, cursor: 'pointer',
+        fontFamily: 'inherit', minHeight: 28, outline: 'none',
         transition: 'background-color 120ms ease, border-color 120ms ease, color 120ms ease',
-        '&:hover': {
-          bg: active ? 'accent.subtle' : 'neutral.subtle',
-          borderColor: active ? 'accent.muted' : 'border.subtle',
-          color: 'fg.default',
-        },
-        '&:focus-visible': {
-          borderColor: 'accent.muted',
-          boxShadow: '0 0 0 2px var(--accent-subtle)',
-        },
+        '&:hover': { bg: active ? 'accent.subtle' : 'neutral.subtle', borderColor: active ? 'accent.muted' : 'border.subtle', color: 'fg.default' },
+        '&:focus-visible': { borderColor: 'accent.muted', boxShadow: '0 0 0 2px var(--accent-subtle)' },
       }}
     >
       <Text>{label}</Text>
@@ -1020,17 +672,7 @@ function StatusTab({
   );
 }
 
-function PageBtn({
-  onClick,
-  disabled,
-  aria,
-  children,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  aria: string;
-  children: React.ReactNode;
-}) {
+function PageBtn({ onClick, disabled, aria, children }: { onClick: () => void; disabled?: boolean; aria: string; children: React.ReactNode }) {
   return (
     <Box
       as="button"
@@ -1039,21 +681,10 @@ function PageBtn({
       aria-label={aria}
       title={aria}
       sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minWidth: 24,
-        height: 24,
-        px: 1,
-        bg: 'transparent',
-        border: '1px solid',
-        borderColor: 'transparent',
-        borderRadius: 1,
-        color: disabled ? 'fg.subtle' : 'fg.muted',
-        cursor: disabled ? 'default' : 'pointer',
-        opacity: disabled ? 0.4 : 1,
-        fontFamily: 'mono',
-        fontSize: 1,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 24, height: 24, px: 1,
+        bg: 'transparent', border: '1px solid', borderColor: 'transparent', borderRadius: 1,
+        color: disabled ? 'fg.subtle' : 'fg.muted', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.4 : 1,
+        fontFamily: 'mono', fontSize: 1,
         '&:hover': disabled ? undefined : { color: 'fg.default', bg: 'canvas.default' },
       }}
     >
@@ -1062,40 +693,14 @@ function PageBtn({
   );
 }
 
-function RepoCardList({
-  rows,
-  startRank,
-  tracked,
-  onToggleTrack,
-  prices,
-  totalEmissionWeight,
-  maxActiveWeight,
-  expandedRepo,
-  onToggleExpand,
-}: {
-  rows: GtRepo[];
-  startRank: number;
-  tracked: Set<string>;
-  onToggleTrack: (fullName: string) => void;
-  prices: PricesResponse | undefined;
-  totalEmissionWeight: number;
-  maxActiveWeight: number;
-  expandedRepo: string | null;
-  onToggleExpand: (fullName: string) => void;
+function RepoCardList({ rows, startRank, tracked, onToggleTrack, prices, totalEmissionWeight, maxActiveWeight, expandedRepo, onToggleExpand }: {
+  rows: GtRepo[]; startRank: number; tracked: Set<string>; onToggleTrack: (fullName: string) => void;
+  prices: PricesResponse | undefined; totalEmissionWeight: number; maxActiveWeight: number;
+  expandedRepo: string | null; onToggleExpand: (fullName: string) => void;
 }) {
   if (rows.length === 0) {
     return (
-      <Box
-        sx={{
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          bg: 'canvas.subtle',
-          p: 4,
-          textAlign: 'center',
-          color: 'fg.muted',
-        }}
-      >
+      <Box sx={{ border: '1px solid', borderColor: 'border.default', borderRadius: 2, bg: 'canvas.subtle', p: 4, textAlign: 'center', color: 'fg.muted' }}>
         No repositories match.
       </Box>
     );
@@ -1120,26 +725,10 @@ function RepoCardList({
   );
 }
 
-function RepoCard({
-  repo: r,
-  rank,
-  isTracked,
-  isExpanded,
-  prices,
-  totalEmissionWeight,
-  maxActiveWeight,
-  onToggleTrack,
-  onToggleExpand,
-}: {
-  repo: GtRepo;
-  rank: number;
-  isTracked: boolean;
-  isExpanded: boolean;
-  prices: PricesResponse | undefined;
-  totalEmissionWeight: number;
-  maxActiveWeight: number;
-  onToggleTrack: (fullName: string) => void;
-  onToggleExpand: (fullName: string) => void;
+function RepoCard({ repo: r, rank, isTracked, isExpanded, prices, totalEmissionWeight, maxActiveWeight, onToggleTrack, onToggleExpand }: {
+  repo: GtRepo; rank: number; isTracked: boolean; isExpanded: boolean; prices: PricesResponse | undefined;
+  totalEmissionWeight: number; maxActiveWeight: number;
+  onToggleTrack: (fullName: string) => void; onToggleExpand: (fullName: string) => void;
 }) {
   const earningShare = r.isActive ? r.weight : 0;
   const { tao: taoPerDay, usd: usdPerDay } = emissionForWeight(earningShare, totalEmissionWeight, prices);
@@ -1147,102 +736,35 @@ function RepoCard({
   const lastMergeStale = lastMergeMs > 0 && Date.now() - lastMergeMs > STALE_PR_MS;
   const detailId = `repo-detail-${r.owner}-${r.name}`;
   return (
-    <Box
-      sx={{
-        border: '1px solid',
-        borderColor: isExpanded ? 'border.default' : 'border.muted',
-        borderRadius: 2,
-        bg: 'canvas.subtle',
-        overflow: 'hidden',
-        opacity: r.isActive ? 1 : 0.7,
-        transition: 'border-color 120ms ease',
-        '&:hover': { borderColor: 'border.default' },
-      }}
-    >
-      {/* Header — clickable to expand. Star button + repo link stop
-          propagation so they remain independent actions. */}
+    <Box sx={{ border: '1px solid', borderColor: isExpanded ? 'border.default' : 'border.muted', borderRadius: 2, bg: 'canvas.subtle', overflow: 'hidden', opacity: r.isActive ? 1 : 0.7, transition: 'border-color 120ms ease', '&:hover': { borderColor: 'border.default' } }}>
       <Box
         tabIndex={0}
         role="button"
         aria-expanded={isExpanded}
         aria-controls={detailId}
-        onClick={(e: React.MouseEvent<HTMLDivElement>) => {
-          if (isInteractiveTarget(e)) return;
-          onToggleExpand(r.fullName);
-        }}
+        onClick={(e: React.MouseEvent<HTMLDivElement>) => { if (isInteractiveTarget(e)) return; onToggleExpand(r.fullName); }}
         onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
           if (isInteractiveTarget(e)) return;
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onToggleExpand(r.fullName);
-          } else if (e.key === 'Escape' && isExpanded) {
-            e.preventDefault();
-            onToggleExpand(r.fullName);
-          }
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleExpand(r.fullName); }
+          else if (e.key === 'Escape' && isExpanded) { e.preventDefault(); onToggleExpand(r.fullName); }
         }}
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: '12px',
-          cursor: 'pointer',
-          outline: 'none',
+          display: 'flex', alignItems: 'center', gap: 2, px: 3, py: '12px', cursor: 'pointer', outline: 'none',
           '&:focus-visible': { boxShadow: 'inset 0 0 0 2px var(--accent-emphasis)' },
           '&:hover': { bg: 'canvas.default' },
           bg: isExpanded ? 'canvas.default' : undefined,
         }}
       >
-        <Box
-          aria-hidden
-          sx={{
-            color: 'fg.muted',
-            display: 'inline-flex',
-            transition: 'transform 120ms ease',
-            transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-            flexShrink: 0,
-          }}
-        >
+        <Box aria-hidden sx={{ color: 'fg.muted', display: 'inline-flex', transition: 'transform 120ms ease', transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', flexShrink: 0 }}>
           <ChevronDownIcon size={14} />
         </Box>
-        <Text
-          sx={{
-            fontFamily: 'mono',
-            fontVariantNumeric: 'tabular-nums',
-            fontWeight: rank <= 3 ? 700 : 500,
-            fontSize: 1,
-            color: rank <= 3 ? 'attention.fg' : 'fg.muted',
-            minWidth: 28,
-            textAlign: 'right',
-            flexShrink: 0,
-          }}
-        >
+        <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: rank <= 3 ? 700 : 500, fontSize: 1, color: rank <= 3 ? 'attention.fg' : 'fg.muted', minWidth: 28, textAlign: 'right', flexShrink: 0 }}>
           #{rank}
         </Text>
-        <Link
-          href={`/repos/${r.owner}/${r.name}`}
-          prefetch={false}
-          onClick={(e) => e.stopPropagation()}
-          style={{ textDecoration: 'none', minWidth: 0, flex: 1 }}
-        >
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 2,
-              color: 'fg.default',
-              minWidth: 0,
-              maxWidth: '100%',
-              '&:hover': { color: 'accent.fg' },
-            }}
-          >
+        <Link href={`/repos/${r.owner}/${r.name}`} prefetch={false} onClick={(e) => e.stopPropagation()} style={{ textDecoration: 'none', minWidth: 0, flex: 1 }}>
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: 'fg.default', minWidth: 0, maxWidth: '100%', '&:hover': { color: 'accent.fg' } }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={avatarUrl(r.owner)}
-              alt={r.owner}
-              loading="lazy"
-              style={{ width: 22, height: 22, borderRadius: '50%', border: '1px solid var(--border-muted)', flexShrink: 0 }}
-            />
+            <img src={avatarUrl(r.owner)} alt={r.owner} loading="lazy" style={{ width: 22, height: 22, borderRadius: '50%', border: '1px solid var(--border-muted)', flexShrink: 0 }} />
             <Text sx={{ fontWeight: 600, fontSize: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {r.fullName}
             </Text>
@@ -1260,44 +782,20 @@ function RepoCard({
         </Link>
         <Box
           as="button"
-          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-            e.stopPropagation();
-            onToggleTrack(r.fullName);
-          }}
+          onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onToggleTrack(r.fullName); }}
           aria-label={isTracked ? 'Untrack' : 'Track'}
           title={isTracked ? 'Untrack repository' : 'Track repository'}
           sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 28,
-            height: 28,
-            bg: 'transparent',
-            border: '1px solid',
-            borderColor: 'transparent',
-            borderRadius: 1,
-            color: isTracked ? 'attention.fg' : 'fg.muted',
-            cursor: 'pointer',
-            flexShrink: 0,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 28, height: 28, bg: 'transparent', border: '1px solid', borderColor: 'transparent', borderRadius: 1,
+            color: isTracked ? 'attention.fg' : 'fg.muted', cursor: 'pointer', flexShrink: 0,
             '&:hover': { bg: 'canvas.inset', borderColor: 'border.muted', color: 'attention.fg' },
           }}
         >
           {isTracked ? <StarFillIcon size={14} /> : <StarIcon size={14} />}
         </Box>
       </Box>
-
-      {/* Metrics grid — same divider-via-gap trick as the KPI strip. Five cells
-          collapse to a single column on the smallest viewports. */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: ['repeat(2, 1fr)', 'repeat(3, 1fr)', 'repeat(5, 1fr)'],
-          gap: '1px',
-          bg: 'border.muted',
-          borderTop: '1px solid',
-          borderColor: 'border.muted',
-        }}
-      >
+      <Box sx={{ display: 'grid', gridTemplateColumns: ['repeat(2, 1fr)', 'repeat(3, 1fr)', 'repeat(5, 1fr)'], gap: '1px', bg: 'border.muted', borderTop: '1px solid', borderColor: 'border.muted' }}>
         <RepoCell
           label="Weight"
           hint="SN74 emission weight (0–1) — the share of network emission allocated to this repo."
@@ -1306,11 +804,7 @@ function RepoCard({
             <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: 2, color: 'fg.default', lineHeight: 1.1 }}>
               {formatWeight(r.weight)}
             </Text>
-            <WeightBar
-              weight={r.weight}
-              maxActiveWeight={maxActiveWeight}
-              isActive={r.isActive}
-            />
+            <WeightBar weight={r.weight} maxActiveWeight={maxActiveWeight} isActive={r.isActive} />
           </Box>
         </RepoCell>
         <RepoCell
@@ -1342,12 +836,7 @@ function RepoCard({
           label="Capacity"
           hint="Open-PR pressure: busiest author vs. the base per-author excessive-PR threshold. The validator can raise a miner's threshold with token score."
         >
-          <CapacityGauge
-            open={r.openPrCount}
-            threshold={r.excessivePrPenaltyThreshold}
-            maxByAuthor={r.openPrMaxByAuthor}
-            authorCount={r.openPrAuthorCount}
-          />
+          <CapacityGauge open={r.openPrCount} threshold={r.excessivePrPenaltyThreshold} maxByAuthor={r.openPrMaxByAuthor} authorCount={r.openPrAuthorCount} />
         </RepoCell>
         <RepoCell
           label="Open Work"
@@ -1362,22 +851,7 @@ function RepoCard({
         </RepoCell>
       </Box>
 
-      {/* Footer — last merge + policy chips. Two stats on a single row that
-          wraps gracefully when chips overflow. */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          rowGap: '8px',
-          columnGap: 3,
-          px: 3,
-          py: 2,
-          borderTop: '1px solid',
-          borderColor: 'border.muted',
-          bg: 'canvas.subtle',
-        }}
-      >
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', rowGap: '8px', columnGap: 3, px: 3, py: 2, borderTop: '1px solid', borderColor: 'border.muted', bg: 'canvas.subtle' }}>
         <Box
           title="Time since the most recent merged PR. Older than 14 days is marked stale."
           sx={{ display: 'inline-flex', alignItems: 'baseline', gap: 2, cursor: 'help', flexShrink: 0 }}
@@ -1393,9 +867,7 @@ function RepoCard({
             </Text>
           )}
         </Box>
-        <Box
-          sx={{ display: 'inline-flex', alignItems: 'center', gap: 2, minWidth: 0, flex: 1 }}
-        >
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 2, minWidth: 0, flex: 1 }}>
           <Text
             title="SN74 scoring policy flags — e.g. fixed base score, trusted label pipeline, configured per-label multipliers."
             sx={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.6px', color: 'fg.subtle', textTransform: 'uppercase', flexShrink: 0, cursor: 'help' }}
@@ -1417,39 +889,10 @@ function RepoCard({
   );
 }
 
-function RepoCell({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
+function RepoCell({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <Box
-      title={hint}
-      sx={{
-        bg: 'canvas.subtle',
-        px: 3,
-        py: '12px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
-        minWidth: 0,
-        cursor: hint ? 'help' : 'default',
-      }}
-    >
-      <Text
-        sx={{
-          fontSize: '10px',
-          fontWeight: 600,
-          letterSpacing: '0.6px',
-          color: 'fg.subtle',
-          textTransform: 'uppercase',
-          lineHeight: 1,
-        }}
-      >
+    <Box title={hint} sx={{ bg: 'canvas.subtle', px: 3, py: '12px', display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0, cursor: hint ? 'help' : 'default' }}>
+      <Text sx={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.6px', color: 'fg.subtle', textTransform: 'uppercase', lineHeight: 1 }}>
         {label}
       </Text>
       <Box sx={{ minWidth: 0 }}>{children}</Box>
@@ -1457,118 +900,40 @@ function RepoCell({
   );
 }
 
-// ─── Desktop table view ─────────────────────────────────────────────────────
-// Same data as `RepoCard`, dense row layout. Shown at lg+ where the horizontal
-// real estate is sufficient for the column-based comparison.
-
-function RepoTable({
-  rows,
-  startRank,
-  sortKey,
-  sortDir,
-  onSort,
-  tracked,
-  onToggleTrack,
-  prices,
-  totalEmissionWeight,
-  maxActiveWeight,
-  expandedRepo,
-  onToggleExpand,
-}: {
-  rows: GtRepo[];
-  startRank: number;
-  sortKey: SortKey;
-  sortDir: 'asc' | 'desc';
-  onSort: (k: SortKey) => void;
-  tracked: Set<string>;
-  onToggleTrack: (fullName: string) => void;
-  prices: PricesResponse | undefined;
-  totalEmissionWeight: number;
-  maxActiveWeight: number;
-  expandedRepo: string | null;
-  onToggleExpand: (fullName: string) => void;
+function RepoTable({ rows, startRank, sortKey, sortDir, onSort, tracked, onToggleTrack, prices, totalEmissionWeight, maxActiveWeight, expandedRepo, onToggleExpand }: {
+  rows: GtRepo[]; startRank: number; sortKey: SortKey; sortDir: 'asc' | 'desc'; onSort: (k: SortKey) => void;
+  tracked: Set<string>; onToggleTrack: (fullName: string) => void;
+  prices: PricesResponse | undefined; totalEmissionWeight: number; maxActiveWeight: number;
+  expandedRepo: string | null; onToggleExpand: (fullName: string) => void;
 }) {
   return (
-    <Box
-      sx={{
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        bg: 'canvas.default',
-        overflowX: 'auto',
-        overflowY: 'hidden',
-      }}
-    >
+    <Box sx={{ border: '1px solid', borderColor: 'border.default', borderRadius: 2, bg: 'canvas.default', overflowX: 'auto', overflowY: 'hidden' }}>
       <Box as="table" sx={{ width: '100%', minWidth: 1100, borderCollapse: 'collapse', fontSize: 1 }}>
         <Box as="thead" sx={{ bg: 'canvas.subtle', borderBottom: '1px solid', borderColor: 'border.default' }}>
           <Box as="tr">
             <Th width={56} hint="Position in the current sort order.">#</Th>
-            <Th
-              sortKey="fullName"
-              current={sortKey}
-              dir={sortDir}
-              onSort={onSort}
-              hint="Repository owner/name. Click to sort alphabetically."
-            >
+            <Th sortKey="fullName" current={sortKey} dir={sortDir} onSort={onSort} hint="Repository owner/name. Click to sort alphabetically.">
               Repository
             </Th>
-            <Th
-              align="right"
-              sortKey="weight"
-              current={sortKey}
-              dir={sortDir}
-              onSort={onSort}
-              hint="SN74 emission weight (0–1) — the share of network emission allocated to this repo."
-            >
+            <Th align="right" sortKey="weight" current={sortKey} dir={sortDir} onSort={onSort} hint="SN74 emission weight (0–1) — the share of network emission allocated to this repo.">
               Weight
             </Th>
-            <Th
-              align="right"
-              sortKey="emission"
-              current={sortKey}
-              dir={sortDir}
-              onSort={onSort}
-              hint="Daily TAO going to miners on this repo (excludes the ~10% issue treasury), with USD equivalent."
-            >
+            <Th align="right" sortKey="emission" current={sortKey} dir={sortDir} onSort={onSort} hint="Daily TAO going to miners on this repo (excludes the ~10% issue treasury), with USD equivalent.">
               Emission/d
             </Th>
             <Th align="left" hint="Daily merged-PR count over the past 14 days, oldest left to newest right.">
               Activity 14d
             </Th>
-            <Th
-              align="left"
-              sortKey="capacity"
-              current={sortKey}
-              dir={sortDir}
-              onSort={onSort}
-              hint="Open-PR pressure: busiest author vs. the base per-author excessive-PR threshold. The validator can raise a miner's threshold with token score."
-            >
+            <Th align="left" sortKey="capacity" current={sortKey} dir={sortDir} onSort={onSort} hint="Open-PR pressure: busiest author vs. the base per-author excessive-PR threshold. The validator can raise a miner's threshold with token score.">
               Capacity
             </Th>
-            <Th
-              align="right"
-              sortKey="openIssues"
-              current={sortKey}
-              dir={sortDir}
-              onSort={onSort}
-              hint="Open issues on this repo — work waiting for an owner."
-            >
+            <Th align="right" sortKey="openIssues" current={sortKey} dir={sortDir} onSort={onSort} hint="Open issues on this repo — work waiting for an owner.">
               Open Work
             </Th>
-            <Th
-              align="right"
-              sortKey="lastMerge"
-              current={sortKey}
-              dir={sortDir}
-              onSort={onSort}
-              hint="Time since the most recent merged PR. Older than 14 days is marked stale."
-            >
+            <Th align="right" sortKey="lastMerge" current={sortKey} dir={sortDir} onSort={onSort} hint="Time since the most recent merged PR. Older than 14 days is marked stale.">
               Last Merge
             </Th>
-            <Th
-              align="left"
-              hint="SN74 scoring policy flags — e.g. fixed base score, trusted label pipeline, configured per-label multipliers."
-            >
+            <Th align="left" hint="SN74 scoring policy flags — e.g. fixed base score, trusted label pipeline, configured per-label multipliers.">
               Policy
             </Th>
             <Th align="center" width={36} hint="Track this repository to surface it in your personal dashboard.">
@@ -1594,84 +959,36 @@ function RepoTable({
                   role="button"
                   aria-expanded={isExpanded}
                   aria-controls={detailId}
-                  onClick={(e: React.MouseEvent<HTMLTableRowElement>) => {
-                    if (isInteractiveTarget(e)) return;
-                    onToggleExpand(r.fullName);
-                  }}
+                  onClick={(e: React.MouseEvent<HTMLTableRowElement>) => { if (isInteractiveTarget(e)) return; onToggleExpand(r.fullName); }}
                   onKeyDown={(e: React.KeyboardEvent<HTMLTableRowElement>) => {
                     if (isInteractiveTarget(e)) return;
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onToggleExpand(r.fullName);
-                    } else if (e.key === 'Escape' && isExpanded) {
-                      e.preventDefault();
-                      onToggleExpand(r.fullName);
-                    }
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleExpand(r.fullName); }
+                    else if (e.key === 'Escape' && isExpanded) { e.preventDefault(); onToggleExpand(r.fullName); }
                   }}
                   sx={{
-                    borderBottom: '1px solid',
-                    borderColor: 'border.muted',
+                    borderBottom: '1px solid', borderColor: 'border.muted',
                     '&:hover': { bg: 'canvas.subtle' },
                     '&:last-child': { borderBottom: isExpanded ? undefined : 'none' },
-                    opacity: r.isActive ? 1 : 0.55,
-                    cursor: 'pointer',
-                    bg: isExpanded ? 'canvas.subtle' : undefined,
-                    outline: 'none',
+                    opacity: r.isActive ? 1 : 0.55, cursor: 'pointer',
+                    bg: isExpanded ? 'canvas.subtle' : undefined, outline: 'none',
                     '&:focus-visible': { boxShadow: 'inset 0 0 0 2px var(--accent-emphasis)' },
                   }}
                 >
                   <Box as="td" sx={{ p: 2, verticalAlign: 'middle' }}>
                     <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-                      <Box
-                        sx={{
-                          color: 'fg.muted',
-                          display: 'inline-flex',
-                          transition: 'transform 120ms ease',
-                          transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-                        }}
-                        aria-hidden
-                      >
+                      <Box sx={{ color: 'fg.muted', display: 'inline-flex', transition: 'transform 120ms ease', transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }} aria-hidden>
                         <ChevronDownIcon size={12} />
                       </Box>
-                      <Text
-                        sx={{
-                          display: 'inline-block',
-                          minWidth: 22,
-                          textAlign: 'right',
-                          fontFamily: 'mono',
-                          fontVariantNumeric: 'tabular-nums',
-                          fontWeight: rank <= 3 ? 700 : 500,
-                          fontSize: 1,
-                          color: rank <= 3 ? 'attention.fg' : 'fg.muted',
-                        }}
-                      >
+                      <Text sx={{ display: 'inline-block', minWidth: 22, textAlign: 'right', fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: rank <= 3 ? 700 : 500, fontSize: 1, color: rank <= 3 ? 'attention.fg' : 'fg.muted' }}>
                         {rank}
                       </Text>
                     </Box>
                   </Box>
                   <Box as="td" sx={{ p: 2, verticalAlign: 'middle' }}>
-                    <Link
-                      href={`/repos/${r.owner}/${r.name}`}
-                      prefetch={false}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ textDecoration: 'none' }}
-                    >
-                      <Box
-                        sx={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 2,
-                          color: 'fg.default',
-                          '&:hover': { color: 'accent.fg' },
-                        }}
-                      >
+                    <Link href={`/repos/${r.owner}/${r.name}`} prefetch={false} onClick={(e) => e.stopPropagation()} style={{ textDecoration: 'none' }}>
+                      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: 'fg.default', '&:hover': { color: 'accent.fg' } }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={avatarUrl(r.owner)}
-                          alt={r.owner}
-                          loading="lazy"
-                          style={{ width: 20, height: 20, borderRadius: '50%', border: '1px solid var(--border-muted)' }}
-                        />
+                        <img src={avatarUrl(r.owner)} alt={r.owner} loading="lazy" style={{ width: 20, height: 20, borderRadius: '50%', border: '1px solid var(--border-muted)' }} />
                         <Text sx={{ fontWeight: 600 }}>{r.fullName}</Text>
                         {r.stars != null && r.stars > 0 && (
                           <Text sx={{ color: 'fg.muted', fontSize: 0, fontVariantNumeric: 'tabular-nums' }}>
@@ -1691,11 +1008,7 @@ function RepoTable({
                       <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'fg.default' }}>
                         {formatWeight(r.weight)}
                       </Text>
-                      <WeightBar
-                        weight={r.weight}
-                        maxActiveWeight={maxActiveWeight}
-                        isActive={r.isActive}
-                      />
+                      <WeightBar weight={r.weight} maxActiveWeight={maxActiveWeight} isActive={r.isActive} />
                     </Box>
                   </Box>
                   <Box as="td" sx={{ p: 2, textAlign: 'right', verticalAlign: 'middle' }}>
@@ -1716,12 +1029,7 @@ function RepoTable({
                     <Sparkline series={r.mergedPrSeries14d} />
                   </Box>
                   <Box as="td" sx={{ p: 2, verticalAlign: 'middle' }}>
-                    <CapacityGauge
-                      open={r.openPrCount}
-                      threshold={r.excessivePrPenaltyThreshold}
-                      maxByAuthor={r.openPrMaxByAuthor}
-                      authorCount={r.openPrAuthorCount}
-                    />
+                    <CapacityGauge open={r.openPrCount} threshold={r.excessivePrPenaltyThreshold} maxByAuthor={r.openPrMaxByAuthor} authorCount={r.openPrAuthorCount} />
                   </Box>
                   <Box as="td" sx={{ p: 2, textAlign: 'right', verticalAlign: 'middle' }}>
                     <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', color: r.openIssueCount > 0 ? 'fg.default' : 'fg.muted' }}>
@@ -1798,73 +1106,31 @@ function RepoTable({
   );
 }
 
-function Th({
-  children,
-  align = 'left',
-  width,
-  sortKey,
-  current,
-  dir,
-  onSort,
-  hint,
-}: {
-  children?: React.ReactNode;
-  align?: 'left' | 'right' | 'center';
-  width?: number;
-  sortKey?: SortKey;
-  current?: SortKey;
-  dir?: 'asc' | 'desc';
-  onSort?: (k: SortKey) => void;
-  hint?: string;
+function Th({ children, align = 'left', width, sortKey, current, dir, onSort, hint }: {
+  children?: React.ReactNode; align?: 'left' | 'right' | 'center'; width?: number;
+  sortKey?: SortKey; current?: SortKey; dir?: 'asc' | 'desc'; onSort?: (k: SortKey) => void; hint?: string;
 }) {
   const isSortable = !!sortKey && !!onSort;
   const active = isSortable && current === sortKey;
   const cursor = isSortable ? 'pointer' : hint ? 'help' : 'default';
-  const ariaSort: 'ascending' | 'descending' | 'none' | undefined = isSortable
-    ? active
-      ? dir === 'asc'
-        ? 'ascending'
-        : 'descending'
-      : 'none'
-    : undefined;
+  const ariaSort: 'ascending' | 'descending' | 'none' | undefined = isSortable ? (active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none') : undefined;
   const activate = isSortable && sortKey ? () => onSort!(sortKey) : undefined;
   return (
     <Box
       as="th"
       aria-sort={ariaSort}
       title={hint}
-      sx={{
-        p: 2,
-        textAlign: align,
-        width,
-        fontWeight: 600,
-        fontSize: '11px',
-        color: active ? 'fg.default' : 'fg.muted',
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px',
-        whiteSpace: 'nowrap',
-        userSelect: 'none',
-      }}
+      sx={{ p: 2, textAlign: align, width, fontWeight: 600, fontSize: '11px', color: active ? 'fg.default' : 'fg.muted', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap', userSelect: 'none' }}
     >
-      {/* Inner button — th can't be a button, but keyboard activation needs one. */}
       <Box
         as={isSortable ? 'button' : 'span'}
         type={isSortable ? 'button' : undefined}
         onClick={activate}
         sx={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 1,
+          display: 'inline-flex', alignItems: 'center', gap: 1,
           justifyContent: align === 'right' ? 'flex-end' : align === 'center' ? 'center' : 'flex-start',
-          width: '100%',
-          color: 'inherit',
-          bg: 'transparent',
-          border: 0,
-          p: 0,
-          font: 'inherit',
-          letterSpacing: 'inherit',
-          textTransform: 'inherit',
-          cursor,
+          width: '100%', color: 'inherit', bg: 'transparent', border: 0, p: 0,
+          font: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit', cursor,
           '&:hover': isSortable || hint ? { color: 'fg.default' } : undefined,
           '&:focus-visible': { outline: '2px solid var(--accent-emphasis)', outlineOffset: '2px' },
         }}
@@ -1876,18 +1142,8 @@ function Th({
   );
 }
 
-function Sparkline({
-  series,
-  width = 80,
-  height = 24,
-  fluid = false,
-  label = 'merged PR',
-}: {
-  series: number[];
-  width?: number;
-  height?: number;
-  fluid?: boolean;
-  label?: string;
+function Sparkline({ series, width = 80, height = 24, fluid = false, label = 'merged PR' }: {
+  series: number[]; width?: number; height?: number; fluid?: boolean; label?: string;
 }) {
   const w = width;
   const h = height;
@@ -1906,32 +1162,13 @@ function Sparkline({
   return (
     <Box
       title={`${formatted} ${label}${total === 1 ? '' : 's'} in the last 14 days`}
-      sx={{
-        display: fluid ? 'block' : 'inline-block',
-        width: fluid ? '100%' : undefined,
-        lineHeight: 0,
-      }}
+      sx={{ display: fluid ? 'block' : 'inline-block', width: fluid ? '100%' : undefined, lineHeight: 0 }}
     >
-      <svg
-        width={fluid ? '100%' : w}
-        height={h}
-        viewBox={`0 0 ${w} ${h}`}
-        preserveAspectRatio={fluid ? 'none' : 'xMidYMid meet'}
-        role="img"
-        aria-label={`${label} sparkline, ${formatted} over 14 days`}
-      >
+      <svg width={fluid ? '100%' : w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio={fluid ? 'none' : 'xMidYMid meet'} role="img" aria-label={`${label} sparkline, ${formatted} over 14 days`}>
         {series.map((v, i) => {
           const bh = v === 0 ? 1 : (v / max) * (h - 2);
           return (
-            <rect
-              key={i}
-              x={i * barW + gap / 2}
-              y={h - bh}
-              width={Math.max(0, barW - gap)}
-              height={bh}
-              fill={v === 0 ? 'var(--border-muted)' : 'var(--accent-emphasis)'}
-              rx={0.5}
-            />
+            <rect key={i} x={i * barW + gap / 2} y={h - bh} width={Math.max(0, barW - gap)} height={bh} fill={v === 0 ? 'var(--border-muted)' : 'var(--accent-emphasis)'} rx={0.5} />
           );
         })}
       </svg>
@@ -1939,49 +1176,19 @@ function Sparkline({
   );
 }
 
-// Max-normalized: leader fills 100%. Uses a global max so the scale doesn't
-// shift across pagination/sort/filter.
-function WeightBar({
-  weight,
-  maxActiveWeight,
-  isActive,
-}: {
-  weight: number;
-  maxActiveWeight: number;
-  isActive: boolean;
-}) {
-  const fillPct =
-    isActive && maxActiveWeight > 0 && weight > 0
-      ? Math.min(100, Math.max(0, (weight / maxActiveWeight) * 100))
-      : 0;
+function WeightBar({ weight, maxActiveWeight, isActive }: { weight: number; maxActiveWeight: number; isActive: boolean }) {
+  const fillPct = isActive && maxActiveWeight > 0 && weight > 0 ? Math.min(100, Math.max(0, (weight / maxActiveWeight) * 100)) : 0;
   return (
     <Box
       sx={{ width: '100%', height: 6, bg: 'canvas.inset', borderRadius: 999, overflow: 'hidden' }}
-      title={
-        isActive && maxActiveWeight > 0 && weight > 0
-          ? `${fillPct.toFixed(1)}% of leader weight`
-          : 'Inactive — not earning'
-      }
+      title={isActive && maxActiveWeight > 0 && weight > 0 ? `${fillPct.toFixed(1)}% of leader weight` : 'Inactive — not earning'}
     >
-      <Box
-        sx={{ height: '100%', bg: 'accent.emphasis', borderRadius: 999 }}
-        style={{ width: `${fillPct}%` }}
-      />
+      <Box sx={{ height: '100%', bg: 'accent.emphasis', borderRadius: 999 }} style={{ width: `${fillPct}%` }} />
     </Box>
   );
 }
 
-function CapacityGauge({
-  open,
-  threshold,
-  maxByAuthor,
-  authorCount,
-}: {
-  open: number;
-  threshold: number | null;
-  maxByAuthor: number;
-  authorCount: number;
-}) {
+function CapacityGauge({ open, threshold, maxByAuthor, authorCount }: { open: number; threshold: number | null; maxByAuthor: number; authorCount: number }) {
   if (threshold == null || threshold <= 0) {
     return (
       <Box sx={{ color: 'fg.muted', fontSize: 0 }} title="No threshold configured">
@@ -1990,7 +1197,6 @@ function CapacityGauge({
     );
   }
   const pct = Math.min(100, (maxByAuthor / threshold) * 100);
-  // Over the base threshold is red; near the base threshold is amber.
   const tone = maxByAuthor > threshold ? 'danger' : pct >= 80 ? 'attention' : 'success';
   return (
     <Box
@@ -2012,22 +1218,13 @@ function PolicyChips({ repo }: { repo: GtRepo }) {
   const chips: Chip[] = [];
   if (repo.trustedLabelPipeline === true) chips.push({ label: 'trusted-label', title: 'Scoring-label pipeline is trusted' });
   if (repo.issueDiscoveryShare != null && repo.issueDiscoveryShare > 0) {
-    chips.push({
-      label: `discovery ${Math.round(repo.issueDiscoveryShare * 100)}%`,
-      title: 'Share of emission allocated to issue discovery',
-    });
+    chips.push({ label: `discovery ${Math.round(repo.issueDiscoveryShare * 100)}%`, title: 'Share of emission allocated to issue discovery' });
   }
   if (repo.maintainerCut != null && repo.maintainerCut > 0) {
-    chips.push({
-      label: `maintainer ${Math.round(repo.maintainerCut * 100)}%`,
-      title: 'Share of emission reserved for registered maintainers',
-    });
+    chips.push({ label: `maintainer ${Math.round(repo.maintainerCut * 100)}%`, title: 'Share of emission reserved for registered maintainers' });
   }
   if (repo.minCredibility != null) {
-    chips.push({
-      label: `min-cred ${repo.minCredibility.toFixed(1)}`,
-      title: 'Minimum PR credibility required for rewards',
-    });
+    chips.push({ label: `min-cred ${repo.minCredibility.toFixed(1)}`, title: 'Minimum PR credibility required for rewards' });
   }
   if (chips.length === 0) {
     return (
@@ -2121,15 +1318,7 @@ function ExpandedRowDetail({ repo }: { repo: GtRepo }) {
   }, [prsResp]);
 
   return (
-    <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: ['1fr', null, null, 'repeat(3, minmax(0, 1fr))'],
-        gap: 3,
-        p: 3,
-      }}
-    >
-      {/* Column 1 — Top contributors */}
+    <Box sx={{ display: 'grid', gridTemplateColumns: ['1fr', null, null, 'repeat(3, minmax(0, 1fr))'], gap: 3, p: 3 }}>
       <DetailColumn title="TOP CONTRIBUTORS · LAST 30D">
         {minersLoading ? (
           <DetailListSkeleton rows={5} />
@@ -2150,21 +1339,7 @@ function ExpandedRowDetail({ repo }: { repo: GtRepo }) {
                 onClick={(e) => e.stopPropagation()}
                 style={{ display: 'block', textDecoration: 'none' }}
               >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    py: '6px',
-                    borderTop: '1px solid',
-                    borderColor: 'border.muted',
-                    '&:first-of-type': { borderTop: 'none' },
-                    '&:hover': { bg: 'canvas.default' },
-                    mx: -2,
-                    px: 2,
-                    borderRadius: 1,
-                  }}
-                >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: '6px', borderTop: '1px solid', borderColor: 'border.muted', '&:first-of-type': { borderTop: 'none' }, '&:hover': { bg: 'canvas.default' }, mx: -2, px: 2, borderRadius: 1 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={m.avatarUrl}
@@ -2173,17 +1348,7 @@ function ExpandedRowDetail({ repo }: { repo: GtRepo }) {
                     style={{ width: 22, height: 22, borderRadius: '50%', border: '1px solid var(--border-muted)' }}
                   />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Text
-                      sx={{
-                        display: 'block',
-                        color: 'fg.default',
-                        fontWeight: 600,
-                        fontSize: 1,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
+                    <Text sx={{ display: 'block', color: 'fg.default', fontWeight: 600, fontSize: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {m.githubUsername}
                     </Text>
                     <Text sx={{ display: 'block', color: 'fg.muted', fontSize: 0 }}>
@@ -2205,7 +1370,6 @@ function ExpandedRowDetail({ repo }: { repo: GtRepo }) {
         )}
       </DetailColumn>
 
-      {/* Column 2 — Open PRs (highest scored first) */}
       <DetailColumn title="OPEN PRS · HIGHEST SCORED">
         {prsLoading ? (
           <DetailListSkeleton rows={5} />
@@ -2224,37 +1388,12 @@ function ExpandedRowDetail({ repo }: { repo: GtRepo }) {
               onClick={(e) => e.stopPropagation()}
               style={{ display: 'block', textDecoration: 'none' }}
             >
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 2,
-                  py: '6px',
-                  borderTop: '1px solid',
-                  borderColor: 'border.muted',
-                  '&:first-of-type': { borderTop: 'none' },
-                  '&:hover': { bg: 'canvas.default' },
-                  mx: -2,
-                  px: 2,
-                  borderRadius: 1,
-                }}
-              >
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, py: '6px', borderTop: '1px solid', borderColor: 'border.muted', '&:first-of-type': { borderTop: 'none' }, '&:hover': { bg: 'canvas.default' }, mx: -2, px: 2, borderRadius: 1 }}>
                 <Box sx={{ color: 'success.fg', display: 'inline-flex', mt: '2px', flexShrink: 0 }}>
                   <GitPullRequestIcon size={12} />
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Text
-                    sx={{
-                      display: 'block',
-                      color: 'fg.default',
-                      fontWeight: 500,
-                      fontSize: 1,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                    title={p.title}
-                  >
+                  <Text sx={{ display: 'block', color: 'fg.default', fontWeight: 500, fontSize: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.title}>
                     <Text as="span" sx={{ color: 'fg.muted', fontFamily: 'mono' }}>
                       #{p.pullRequestNumber}
                     </Text>{' '}
@@ -2265,24 +1404,7 @@ function ExpandedRowDetail({ repo }: { repo: GtRepo }) {
                   </Text>
                 </Box>
                 {p.score > 0 && (
-                  <Box
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      px: 1,
-                      py: '1px',
-                      border: '1px solid',
-                      borderColor: 'border.muted',
-                      borderRadius: 999,
-                      bg: 'canvas.default',
-                      fontFamily: 'mono',
-                      fontVariantNumeric: 'tabular-nums',
-                      fontSize: 0,
-                      fontWeight: 700,
-                      color: 'fg.default',
-                      flexShrink: 0,
-                    }}
-                  >
+                  <Box sx={{ display: 'inline-flex', alignItems: 'center', px: 1, py: '1px', border: '1px solid', borderColor: 'border.muted', borderRadius: 999, bg: 'canvas.default', fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontSize: 0, fontWeight: 700, color: 'fg.default', flexShrink: 0 }}>
                     {p.score.toFixed(2)}
                   </Box>
                 )}
@@ -2292,7 +1414,6 @@ function ExpandedRowDetail({ repo }: { repo: GtRepo }) {
         )}
       </DetailColumn>
 
-      {/* Column 3 — Recently merged PRs (mirrors Open PRs, but for shipped work) */}
       <DetailColumn title="RECENTLY MERGED">
         {prsLoading ? (
           <DetailListSkeleton rows={5} />
@@ -2311,37 +1432,12 @@ function ExpandedRowDetail({ repo }: { repo: GtRepo }) {
               onClick={(e) => e.stopPropagation()}
               style={{ display: 'block', textDecoration: 'none' }}
             >
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 2,
-                  py: '6px',
-                  borderTop: '1px solid',
-                  borderColor: 'border.muted',
-                  '&:first-of-type': { borderTop: 'none' },
-                  '&:hover': { bg: 'canvas.default' },
-                  mx: -2,
-                  px: 2,
-                  borderRadius: 1,
-                }}
-              >
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, py: '6px', borderTop: '1px solid', borderColor: 'border.muted', '&:first-of-type': { borderTop: 'none' }, '&:hover': { bg: 'canvas.default' }, mx: -2, px: 2, borderRadius: 1 }}>
                 <Box sx={{ color: 'done.fg', display: 'inline-flex', mt: '2px', flexShrink: 0 }}>
                   <GitMergeIcon size={12} />
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Text
-                    sx={{
-                      display: 'block',
-                      color: 'fg.default',
-                      fontWeight: 500,
-                      fontSize: 1,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                    title={p.title}
-                  >
+                  <Text sx={{ display: 'block', color: 'fg.default', fontWeight: 500, fontSize: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.title}>
                     <Text as="span" sx={{ color: 'fg.muted', fontFamily: 'mono' }}>
                       #{p.pullRequestNumber}
                     </Text>{' '}
@@ -2352,24 +1448,7 @@ function ExpandedRowDetail({ repo }: { repo: GtRepo }) {
                   </Text>
                 </Box>
                 {p.score > 0 && (
-                  <Box
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      px: 1,
-                      py: '1px',
-                      border: '1px solid',
-                      borderColor: 'border.muted',
-                      borderRadius: 999,
-                      bg: 'canvas.default',
-                      fontFamily: 'mono',
-                      fontVariantNumeric: 'tabular-nums',
-                      fontSize: 0,
-                      fontWeight: 700,
-                      color: 'fg.default',
-                      flexShrink: 0,
-                    }}
-                  >
+                  <Box sx={{ display: 'inline-flex', alignItems: 'center', px: 1, py: '1px', border: '1px solid', borderColor: 'border.muted', borderRadius: 999, bg: 'canvas.default', fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontSize: 0, fontWeight: 700, color: 'fg.default', flexShrink: 0 }}>
                     {p.score.toFixed(2)}
                   </Box>
                 )}
@@ -2385,16 +1464,7 @@ function ExpandedRowDetail({ repo }: { repo: GtRepo }) {
 function DetailColumn({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-      <Text
-        sx={{
-          fontSize: '11px',
-          fontWeight: 600,
-          letterSpacing: '0.5px',
-          color: 'fg.muted',
-          textTransform: 'uppercase',
-          mb: 2,
-        }}
-      >
+      <Text sx={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.5px', color: 'fg.muted', textTransform: 'uppercase', mb: 2 }}>
         {title}
       </Text>
       <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>{children}</Box>
