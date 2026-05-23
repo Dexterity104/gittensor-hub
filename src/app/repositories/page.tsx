@@ -45,7 +45,7 @@ interface PricesResponse {
   fetched_at: number;
 }
 
-type SortKey = 'weight' | 'emission' | 'capacity' | 'openIssues' | 'lastMerge' | 'fullName';
+type SortKey = 'weight' | 'emission' | 'capacity' | 'openPrs' | 'openIssues' | 'lastMerge' | 'fullName';
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 const PAGE_SIZES = [10, 12, 25, 50, 100];
@@ -54,7 +54,8 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'weight', label: 'Weight' },
   { key: 'emission', label: 'Emission/day' },
   { key: 'capacity', label: 'Capacity' },
-  { key: 'openIssues', label: 'Open Work' },
+  { key: 'openPrs', label: 'Open PRs' },
+  { key: 'openIssues', label: 'Open Issues' },
   { key: 'lastMerge', label: 'Last merge' },
   { key: 'fullName', label: 'Repository' },
 ];
@@ -122,6 +123,7 @@ export default function RepositoriesPage() {
       if (sortKey === 'weight') cmp = a.weight - b.weight;
       else if (sortKey === 'emission') cmp = a.weight - b.weight;
       else if (sortKey === 'capacity') cmp = capacityUtilization(a) - capacityUtilization(b);
+      else if (sortKey === 'openPrs') cmp = a.openPrCount - b.openPrCount;
       else if (sortKey === 'openIssues') cmp = a.openIssueCount - b.openIssueCount;
       else if (sortKey === 'lastMerge') {
         const at = a.lastPrAt ? Date.parse(a.lastPrAt) : 0;
@@ -134,24 +136,19 @@ export default function RepositoriesPage() {
     return list;
   }, [data, query, status, sortKey, sortDir]);
 
-  const { underutilized, openWork, goingStale } = useMemo(() => {
-    const empty = { underutilized: [] as GtRepo[], openWork: [] as GtRepo[], goingStale: [] as GtRepo[] };
+  const { trending, collateralLeaders, goingStale } = useMemo(() => {
+    const empty = { trending: [] as GtRepo[], collateralLeaders: [] as GtRepo[], goingStale: [] as GtRepo[] };
     if (!data?.repos) return empty;
     const active = data.repos.filter((r) => r.isActive);
-    const utilization = (r: GtRepo): number | null => {
-      const thr = r.excessivePrPenaltyThreshold;
-      if (thr == null || thr <= 0) return null;
-      return r.openPrMaxByAuthor / thr;
-    };
-    const underutilized = active
-      .map((r) => ({ r, u: utilization(r) }))
-      .filter(({ r, u }) => r.weight > 0 && u != null && u < 1)
-      .sort((a, b) => b.r.weight / Math.max(b.u!, 0.05) - a.r.weight / Math.max(a.u!, 0.05))
+    const trending = active
+      .map((r) => ({ r, delta: r.prsThisWeek - r.prsLastWeek }))
+      .filter(({ delta }) => delta > 0)
+      .sort((a, b) => b.delta - a.delta)
       .slice(0, OPPORTUNITY_LIMIT)
       .map(({ r }) => r);
-    const openWork = [...active]
-      .filter((r) => r.openIssueCount > 0)
-      .sort((a, b) => b.openIssueCount - a.openIssueCount)
+    const collateralLeaders = [...active]
+      .filter((r) => r.collateralStaked > 0)
+      .sort((a, b) => b.collateralStaked - a.collateralStaked)
       .slice(0, OPPORTUNITY_LIMIT);
     const staleCutoff = Date.now() - STALE_PR_MS;
     const goingStale = active
@@ -166,7 +163,7 @@ export default function RepositoriesPage() {
         return at - bt;
       })
       .slice(0, OPPORTUNITY_LIMIT);
-    return { underutilized, openWork, goingStale };
+    return { trending, collateralLeaders, goingStale };
   }, [data]);
 
   const maxActiveWeight = useMemo(() => {
@@ -334,40 +331,41 @@ export default function RepositoriesPage() {
 
           <Box sx={{ width: ['100%', null, null, 320], flexShrink: 0, position: ['static', null, null, 'sticky'], top: 16, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <OpportunityCard
-              title="Underutilized capacity"
-              hint="High weight, below base per-author PR pressure"
+              title="Trending this week"
+              hint="Biggest WoW gain in merged PRs"
               accent="success"
-              rows={underutilized}
-              empty="No repos with open capacity right now."
+              rows={trending}
+              empty="No repos with positive momentum this week."
               renderRight={(r) => {
-                const thr = r.excessivePrPenaltyThreshold ?? 0;
+                const delta = r.prsThisWeek - r.prsLastWeek;
                 return (
                   <Box sx={{ textAlign: 'right' }}>
-                    <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'fg.default' }}>
-                      {formatWeight(r.weight)}
-                    </Text>
                     <Text
-                      sx={{ display: 'block', fontSize: 0, color: 'fg.muted' }}
-                      title={`${r.openPrCount} open PRs across ${r.openPrAuthorCount} author${r.openPrAuthorCount === 1 ? '' : 's'}; busiest author has ${r.openPrMaxByAuthor}`}
+                      sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'success.fg' }}
+                      title={`${r.prsThisWeek} merged this week vs. ${r.prsLastWeek} prior week`}
                     >
-                      max {r.openPrMaxByAuthor}/{thr > 0 ? thr : '∞'}
+                      +{delta}
                     </Text>
+                    <Text sx={{ display: 'block', fontSize: 0, color: 'fg.muted' }}>PR · 7d</Text>
                   </Box>
                 );
               }}
             />
             <OpportunityCard
-              title="Open work available"
-              hint="Issues waiting for an owner"
+              title="Collateral leaders"
+              hint="Most open-PR collateral score locked"
               accent="accent"
-              rows={openWork}
-              empty="No open issues across tracked repos."
+              rows={collateralLeaders}
+              empty="No collateral locked across tracked repos."
               renderRight={(r) => (
                 <Box sx={{ textAlign: 'right' }}>
-                  <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'fg.default' }}>
-                    {formatCount(r.openIssueCount)}
+                  <Text
+                    sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'fg.default' }}
+                    title="Sum of collateral score across this repo's open PRs (~20% of token score per open PR)."
+                  >
+                    {formatCount(Math.round(r.collateralStaked), { fallback: '0' })}
                   </Text>
-                  <Text sx={{ display: 'block', fontSize: 0, color: 'fg.muted' }}>open</Text>
+                  <Text sx={{ display: 'block', fontSize: 0, color: 'fg.muted' }}>collateral</Text>
                 </Box>
               )}
             />
@@ -459,24 +457,29 @@ function NetworkKpiStrip({ data, prices }: { data: GtReposResponse | undefined; 
   const stakedCount = data?.stakedRepoCount ?? 0;
   const weight = data?.totalEmissionWeight ?? 0;
   const top5Share = data?.top5WeightConcentration ?? 0;
-  const taoUsd = prices?.tao_usd ?? 0;
-  const change24h = prices?.tao_usd_change_24h ?? null;
   const { tao: taoPerDay, usd: usdPerDay } = emissionForWeight(weight, weight, prices);
+  const discoveryRepos = (data?.repos ?? []).filter(
+    (r) => r.isActive && r.issueDiscoveryShare != null && r.issueDiscoveryShare > 0,
+  );
+  const discoveryWeight = discoveryRepos.reduce(
+    (s, r) => s + r.weight * (r.issueDiscoveryShare ?? 0),
+    0,
+  );
+  const discoveryShareOfWeight = weight > 0 ? discoveryWeight / weight : 0;
+  const discoveryEnabledCount = discoveryRepos.length;
+  const discoveryFullCount = discoveryRepos.filter((r) => (r.issueDiscoveryShare ?? 0) >= 1).length;
+  const discoveryPartialCount = discoveryEnabledCount - discoveryFullCount;
   const merged7d = data?.prsMergedThisWeek ?? 0;
   const mergedPrev = data?.prsMergedLastWeek ?? 0;
   const mergedDelta = merged7d - mergedPrev;
   const mergedSeries = data?.prsMergedSeries14d ?? [];
-  const contributors7d = data?.uniqueContributors7d ?? 0;
-  const contributorsPrev = data?.uniqueContributorsPriorWeek ?? 0;
-  const contributorsDelta = contributors7d - contributorsPrev;
-  const newC = data?.newContributors7d ?? 0;
-  const retC = data?.returningContributors7d ?? 0;
-  const score7d = data?.scoreEarnedThisWeek ?? 0;
-  const scorePrev = data?.scoreEarnedPriorWeek ?? 0;
-  const scoreDelta = Math.round(score7d - scorePrev);
   const lat7d = data?.medianMergeLatencyHours7d ?? 0;
   const latPrev = data?.medianMergeLatencyHoursPriorWeek ?? 0;
   const latDeltaHours = Math.round(lat7d - latPrev);
+  const totalCollateral = (data?.repos ?? []).reduce((s, r) => s + (r.collateralStaked ?? 0), 0);
+  const totalOpenPrs = (data?.repos ?? []).reduce((s, r) => s + (r.openPrCount ?? 0), 0);
+  const totalOpenIssues = (data?.repos ?? []).reduce((s, r) => s + (r.openIssueCount ?? 0), 0);
+  const totalOpenWork = totalOpenPrs + totalOpenIssues;
 
   return (
     <Box sx={{ border: '1px solid', borderColor: 'border.default', borderRadius: 2, mb: 2, overflow: 'hidden' }}>
@@ -489,25 +492,6 @@ function NetworkKpiStrip({ data, prices }: { data: GtReposResponse | undefined; 
             usdPerDay != null
               ? `${formatUsd(usdPerDay)}/d · ${formatYearlyUsd(usdPerDay)}`
               : 'weight share'
-          }
-        />
-        <SupportCell
-          label="τ Price"
-          hint="TAO/USD spot price from CoinGecko, with 24h change."
-          value={taoUsd > 0 ? formatUsd(taoUsd, { style: 'price' }) : '—'}
-          sub={
-            change24h == null ? (
-              taoUsd > 0 ? 'TAO/USD' : 'price unavailable'
-            ) : (
-              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <DeltaIndicator
-                  value={Number(change24h.toFixed(2))}
-                  direction="up-is-good"
-                  format={(abs) => `${abs.toFixed(2)}%`}
-                />
-                <Text as="span" sx={{ fontSize: 0, color: 'fg.subtle' }}>24h</Text>
-              </Box>
-            )
           }
         />
         <SupportCell
@@ -529,7 +513,37 @@ function NetworkKpiStrip({ data, prices }: { data: GtReposResponse | undefined; 
           label="Weight Allocated"
           hint="Sum of active-repo weights — the share of SN74 emission flowing to tracked repos."
           value={formatWeight(weight)}
-          sub={top5Share > 0 ? `Top 5 hold ${Math.round(top5Share * 100)}%` : 'No active weight'}
+          sub={top5Share > 0 ? `Top 5 hold ${(top5Share * 100).toFixed(1)}%` : 'No active weight'}
+        />
+        <SupportCell
+          label="Issue Discovery"
+          hint="Weight-weighted share of active-repo emission routed to issue discovery (vs. PR merging). Some SN74 repos route up to 100% of their emission to discovery; others 0%."
+          value={discoveryEnabledCount > 0 ? `${(discoveryShareOfWeight * 100).toFixed(1)}%` : '—'}
+          sub={
+            discoveryEnabledCount === 0
+              ? 'none enabled'
+              : discoveryFullCount > 0 && discoveryPartialCount > 0
+                ? `${discoveryFullCount} full · ${discoveryPartialCount} partial`
+                : discoveryFullCount > 0
+                  ? `${discoveryFullCount} repo${discoveryFullCount === 1 ? '' : 's'} · 100%`
+                  : `${discoveryPartialCount} repo${discoveryPartialCount === 1 ? '' : 's'} · partial`
+          }
+        />
+        <SupportCell
+          label="Collateral"
+          hint="Total open-PR collateral score locked across tracked repos. Each open PR reserves ~20% of its token score as collateral until merge — a leading indicator of pending payout pressure."
+          value={formatCount(Math.round(totalCollateral), { fallback: '0' })}
+          sub={totalCollateral > 0 ? 'open-PR collateral' : 'none locked'}
+        />
+        <SupportCell
+          label="Open Work"
+          hint="Open PRs and open issues across tracked repos — the combined work-in-flight pipeline available to miners."
+          value={formatCount(totalOpenWork, { fallback: '0' })}
+          sub={
+            totalOpenWork === 0
+              ? 'none open'
+              : `${formatCount(totalOpenPrs)} PR · ${formatCount(totalOpenIssues)} issue`
+          }
         />
         <SupportCell
           label="Merged 7d"
@@ -547,34 +561,6 @@ function NetworkKpiStrip({ data, prices }: { data: GtReposResponse | undefined; 
               <Sparkline series={mergedSeries} fluid height={14} label="merged PR" />
             </Box>
           }
-        />
-        <SupportCell
-          label="Contributors 7d"
-          hint="Distinct PR authors merged in the last 7 days. ‘new’ = first-ever merge in this window; ‘ret’ = had merges before 14d ago."
-          value={
-            <Box sx={{ display: 'inline-flex', alignItems: 'baseline', gap: 1 }}>
-              {formatCount(contributors7d, { fallback: '0' })}
-              {contributorsDelta !== 0 && (
-                <DeltaIndicator value={contributorsDelta} direction="up-is-good" />
-              )}
-            </Box>
-          }
-          sub={
-            contributors7d === 0
-              ? 'no merged-PR authors'
-              : `${formatCount(newC)} new · ${formatCount(retC)} ret`
-          }
-        />
-        <SupportCell
-          label="PR Score 7d"
-          hint="Sum of official Gittensor PR scores for PRs merged in the last 7 days. This is a raw scoring metric, not TAO paid out."
-          value={
-            <Box sx={{ display: 'inline-flex', alignItems: 'baseline', gap: 1 }}>
-              {formatCount(Math.round(score7d), { fallback: '0' })}
-              {scoreDelta !== 0 && <DeltaIndicator value={scoreDelta} direction="up-is-good" />}
-            </Box>
-          }
-          sub="raw score"
         />
         <SupportCell
           label="Merge Latency"
@@ -795,7 +781,7 @@ function RepoCard({ repo: r, rank, isTracked, isExpanded, prices, totalEmissionW
           {isTracked ? <StarFillIcon size={14} /> : <StarIcon size={14} />}
         </Box>
       </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: ['repeat(2, 1fr)', 'repeat(3, 1fr)', 'repeat(5, 1fr)'], gap: '1px', bg: 'border.muted', borderTop: '1px solid', borderColor: 'border.muted' }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: ['repeat(2, 1fr)', 'repeat(3, 1fr)', 'repeat(6, 1fr)'], gap: '1px', bg: 'border.muted', borderTop: '1px solid', borderColor: 'border.muted' }}>
         <RepoCell
           label="Weight"
           hint="SN74 emission weight (0–1) — the share of network emission allocated to this repo."
@@ -834,16 +820,29 @@ function RepoCard({ repo: r, rank, isTracked, isExpanded, prices, totalEmissionW
         </RepoCell>
         <RepoCell
           label="Capacity"
-          hint="Open-PR pressure: busiest author vs. the base per-author excessive-PR threshold. The validator can raise a miner's threshold with token score."
+          hint="Open-PR pressure: busiest contributor vs. the base per-contributor excessive-PR threshold. The validator can raise a miner's threshold with token score."
         >
           <CapacityGauge open={r.openPrCount} threshold={r.excessivePrPenaltyThreshold} maxByAuthor={r.openPrMaxByAuthor} authorCount={r.openPrAuthorCount} />
         </RepoCell>
         <RepoCell
-          label="Open Work"
+          label="Open PRs"
+          hint="Total open non-draft PRs on this repo across all contributors. Capacity gauges per-contributor pressure; this is the network total."
+        >
+          <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: 2, color: r.openPrCount > 0 ? 'fg.default' : 'fg.muted', lineHeight: 1.1 }}>
+            {formatCount(r.openPrCount, { fallback: '0' })}
+          </Text>
+          {r.openPrCount > 0 && r.openPrAuthorCount > 0 && (
+            <Text sx={{ fontSize: 0, color: 'fg.muted', mt: '4px' }}>
+              {r.openPrAuthorCount} contributor{r.openPrAuthorCount === 1 ? '' : 's'}
+            </Text>
+          )}
+        </RepoCell>
+        <RepoCell
+          label="Open Issues"
           hint="Open issues on this repo — work waiting for an owner."
         >
           <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: 2, color: r.openIssueCount > 0 ? 'fg.default' : 'fg.muted', lineHeight: 1.1 }}>
-            {formatCount(r.openIssueCount)}
+            {formatCount(r.openIssueCount, { fallback: '0' })}
           </Text>
           {r.openIssueCount > 0 && (
             <Text sx={{ fontSize: 0, color: 'fg.muted', mt: '4px' }}>open issues</Text>
@@ -924,11 +923,14 @@ function RepoTable({ rows, startRank, sortKey, sortDir, onSort, tracked, onToggl
             <Th align="left" hint="Daily merged-PR count over the past 14 days, oldest left to newest right.">
               Activity 14d
             </Th>
-            <Th align="left" sortKey="capacity" current={sortKey} dir={sortDir} onSort={onSort} hint="Open-PR pressure: busiest author vs. the base per-author excessive-PR threshold. The validator can raise a miner's threshold with token score.">
+            <Th align="left" sortKey="capacity" current={sortKey} dir={sortDir} onSort={onSort} hint="Open-PR pressure: busiest contributor vs. the base per-contributor excessive-PR threshold. The validator can raise a miner's threshold with token score.">
               Capacity
             </Th>
+            <Th align="right" sortKey="openPrs" current={sortKey} dir={sortDir} onSort={onSort} hint="Total open non-draft PRs on this repo across all contributors. Capacity shows per-contributor pressure; this is the repo total.">
+              Open PRs
+            </Th>
             <Th align="right" sortKey="openIssues" current={sortKey} dir={sortDir} onSort={onSort} hint="Open issues on this repo — work waiting for an owner.">
-              Open Work
+              Open Issues
             </Th>
             <Th align="right" sortKey="lastMerge" current={sortKey} dir={sortDir} onSort={onSort} hint="Time since the most recent merged PR. Older than 14 days is marked stale.">
               Last Merge
@@ -1032,8 +1034,16 @@ function RepoTable({ rows, startRank, sortKey, sortDir, onSort, tracked, onToggl
                     <CapacityGauge open={r.openPrCount} threshold={r.excessivePrPenaltyThreshold} maxByAuthor={r.openPrMaxByAuthor} authorCount={r.openPrAuthorCount} />
                   </Box>
                   <Box as="td" sx={{ p: 2, textAlign: 'right', verticalAlign: 'middle' }}>
+                    <Text
+                      sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', color: r.openPrCount > 0 ? 'fg.default' : 'fg.muted' }}
+                      title={r.openPrCount > 0 ? `${r.openPrCount} open across ${r.openPrAuthorCount} contributor${r.openPrAuthorCount === 1 ? '' : 's'}; busiest has ${r.openPrMaxByAuthor}` : 'No open PRs'}
+                    >
+                      {formatCount(r.openPrCount, { fallback: '0' })}
+                    </Text>
+                  </Box>
+                  <Box as="td" sx={{ p: 2, textAlign: 'right', verticalAlign: 'middle' }}>
                     <Text sx={{ fontFamily: 'mono', fontVariantNumeric: 'tabular-nums', color: r.openIssueCount > 0 ? 'fg.default' : 'fg.muted' }}>
-                      {formatCount(r.openIssueCount)}
+                      {formatCount(r.openIssueCount, { fallback: '0' })}
                     </Text>
                   </Box>
                   <Box as="td" sx={{ p: 2, textAlign: 'right', verticalAlign: 'middle' }}>
@@ -1201,7 +1211,7 @@ function CapacityGauge({ open, threshold, maxByAuthor, authorCount }: { open: nu
   return (
     <Box
       sx={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch', gap: '3px', minWidth: 80 }}
-      title={`Busiest author has ${maxByAuthor} open PR${maxByAuthor === 1 ? '' : 's'} vs. the base ${threshold} per-author threshold; ${open} total open PR${open === 1 ? '' : 's'} across ${authorCount} author${authorCount === 1 ? '' : 's'}. High-token miners may have a higher validator threshold.`}
+      title={`Busiest contributor has ${maxByAuthor} open PR${maxByAuthor === 1 ? '' : 's'} vs. the base ${threshold} per-contributor threshold; ${open} total open PR${open === 1 ? '' : 's'} across ${authorCount} contributor${authorCount === 1 ? '' : 's'}. High-token miners may have a higher validator threshold.`}
     >
       <Box sx={{ width: '100%', height: 6, bg: 'canvas.inset', borderRadius: 999, overflow: 'hidden' }}>
         <Box sx={{ height: '100%', bg: `${tone}.emphasis` }} style={{ width: `${pct}%` }} />
