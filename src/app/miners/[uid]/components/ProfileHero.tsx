@@ -40,7 +40,6 @@ function deriveHeroStatus(miner: MinerProfile, prs: PrDetail[]): MinerStatus {
   }).length;
   const merged      = miner.totalMergedPrs ?? 0;
   const uniqueRepos = miner.uniqueReposCount ?? 0;
-
   if (recent3 >= 3) return makeStatus('hot');
   if (recent14 === 0 && merged > 0) return makeStatus('dormant');
   if (uniqueRepos > 0 && uniqueRepos <= 2 && merged >= 5) return makeStatus('specialist');
@@ -52,23 +51,12 @@ export function ProfileHero({
   ghName, ghAvatar, miner, uid, isMe, isTracked, toggle, copied, onCopyHotkey, prs = [],
 }: ProfileHeroProps) {
   const evaluatedAt = miner?.evaluatedAt;
-
   const status = useMemo<MinerStatus>(() => {
     if (!miner) return STATUS_NONE;
     return deriveHeroStatus(miner, prs);
   }, [miner, prs]);
-
   return (
-    <Box
-      sx={{
-        px: [2, null, 3],
-        py: ['10px', null, '12px'],
-        display: 'flex',
-        alignItems: 'center',
-        gap: [2, null, 3],
-        flexWrap: 'wrap',
-      }}
-    >
+    <Box sx={{ px: [2, null, 3], py: ['10px', null, '12px'], display: 'flex', alignItems: 'center', gap: [2, null, 3], flexWrap: 'wrap', }} >
       <Box
         sx={{
           width: [40, null, 44],
@@ -83,7 +71,6 @@ export function ProfileHero({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={ghAvatar} alt={ghName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </Box>
-
       <Box sx={{ flex: '1 1 240px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {}
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
@@ -106,7 +93,6 @@ export function ProfileHero({
           <EligibilityBadge eligible={!!miner?.isIssueEligible} label="DISC" />
           {status.kind !== 'none' && <StatusBadge status={status} />}
         </Box>
-
         {}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
           {miner?.hotkey && (
@@ -185,7 +171,6 @@ export function ProfileHero({
           )}
         </Box>
       </Box>
-
       <Box
         as="button"
         onClick={toggle}

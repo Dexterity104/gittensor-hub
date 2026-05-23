@@ -41,37 +41,15 @@ export type { SortDir };
 
 const COLS = '44px minmax(170px, 240px) 124px minmax(88px, 104px) 60px 72px 84px minmax(180px, 1fr) 92px 28px';
 
-function MinerIdentity({
-  miner,
-  avatarSize,
-  showUid = true,
-}: {
-  miner: Miner;
-  avatarSize: number;
-  showUid?: boolean;
-}) {
+function MinerIdentity({ miner, avatarSize, showUid = true }: { miner: Miner; avatarSize: number; showUid?: boolean }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
       <MinerAvatar miner={miner} size={avatarSize} />
       <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-        <Text
-          sx={{
-            fontWeight: 600,
-            fontSize: 1,
-            color: 'fg.default',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            ...NOWRAP,
-            letterSpacing: '-0.005em',
-          }}
-        >
+        <Text sx={{ fontWeight: 600, fontSize: 1, color: 'fg.default', overflow: 'hidden', textOverflow: 'ellipsis', ...NOWRAP, letterSpacing: '-0.005em', }} >
           {ghName(miner)}
         </Text>
-        {showUid && (
-          <Text sx={{ ...MONO, fontSize: '11px', color: 'fg.subtle', flexShrink: 0 }}>
-            #{miner.uid}
-          </Text>
-        )}
+        {showUid && (<Text sx={{ ...MONO, fontSize: '11px', color: 'fg.subtle', flexShrink: 0 }}> #{miner.uid} </Text>)}
       </Box>
     </Box>
   );
@@ -107,17 +85,7 @@ function TrackButton({ isTracked, onClick }: { isTracked: boolean; onClick: () =
   );
 }
 
-function Sparkline({
-  values,
-  width = 72,
-  height = 22,
-  title,
-}: {
-  values: number[];
-  width?: number;
-  height?: number;
-  title?: string;
-}) {
+function Sparkline({ values, width = 72, height = 22, title }: { values: number[]; width?: number; height?: number; title?: string }) {
   if (!values.length) {
     return <Box title={title} aria-hidden sx={{ width, height, display: 'inline-block' }} />;
   }
@@ -129,36 +97,17 @@ function Sparkline({
       ? `No PR activity in the last ${cols} days`
       : `PR activity · ${total} merged in ${cols}d · ${last7} in the last 7d${trendText}`);
   const { linePoints, areaD } = computeSparklinePath(values, { width, height });
-
   return (
-    <Box
-      title={computedTitle}
-      aria-label={computedTitle}
-      sx={{ display: 'inline-block', width, height, flexShrink: 0 }}
-    >
+    <Box title={computedTitle} aria-label={computedTitle} sx={{ display: 'inline-block', width, height, flexShrink: 0 }} >
       <svg width={width} height={height} style={{ display: 'block', overflow: 'hidden' }}>
         <path d={areaD} fill="var(--accent-fg)" opacity={0.08} />
-        <polyline
-          points={linePoints}
-          fill="none"
-          stroke="var(--accent-fg)"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          opacity={0.7}
-        />
+        <polyline points={linePoints} fill="none" stroke="var(--accent-fg)" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" opacity={0.7} />
       </svg>
     </Box>
   );
 }
 
-function MovementCell({
-  currentRank,
-  previousRank,
-}: {
-  currentRank: number;
-  previousRank: number | null | undefined;
-}) {
+function MovementCell({ currentRank, previousRank }: { currentRank: number; previousRank: number | null | undefined }) {
   if (previousRank == null) {
     return (
       <Text title="No rank snapshot from yesterday yet" sx={{ ...MONO, fontSize: '10px', color: 'fg.subtle', whiteSpace: 'nowrap' }}>
@@ -168,11 +117,7 @@ function MovementCell({
   }
   const delta = previousRank - currentRank;
   if (delta === 0) {
-    return (
-      <Text title="No rank change since yesterday" sx={{ ...MONO, fontSize: '11px', color: 'fg.subtle', lineHeight: 1 }}>
-        ·
-      </Text>
-    );
+    return (<Text title="No rank change since yesterday" sx={{ ...MONO, fontSize: '11px', color: 'fg.subtle', lineHeight: 1 }}> · </Text>);
   }
   const up = delta > 0;
   const abs = Math.abs(delta);
@@ -201,17 +146,7 @@ function ContribCell({
   discScore: number; discEligible: boolean;
 }) {
   return (
-    <Box
-      sx={{
-        gridArea: 'contrib',
-        display: ['none', null, 'flex'],
-        flexDirection: 'column',
-        gap: '5px',
-        minWidth: 0,
-        px: '6px',
-        justifyContent: 'center',
-      }}
-    >
+    <Box sx={{ gridArea: 'contrib', display: ['none', null, 'flex'], flexDirection: 'column', gap: '5px', minWidth: 0, px: '6px', justifyContent: 'center', }} >
       {}
       <Box
         sx={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}
@@ -254,17 +189,7 @@ function ContribCell({
   );
 }
 
-function RepoChip({
-  fullName,
-  active,
-  count,
-  onClick,
-}: {
-  fullName: string;
-  active?: boolean;
-  count?: number;
-  onClick?: (fullName: string) => void;
-}) {
+function RepoChip({ fullName, active, count, onClick }: { fullName: string; active?: boolean; count?: number; onClick?: (fullName: string) => void }) {
   const slashIdx = fullName.lastIndexOf('/');
   const short = slashIdx >= 0 ? fullName.slice(slashIdx + 1) : fullName;
   const owner = slashIdx >= 0 ? fullName.slice(0, slashIdx) : '';
@@ -304,11 +229,7 @@ function RepoChip({
         '@media (hover: hover)': onClick ? { '&:hover': { color: 'fg.default', borderColor: 'border.default' } } : undefined,
       }}
     >
-      {owner && (
-        <Text as="span" sx={{ opacity: 0.45, fontSize: '9px', fontWeight: 500, letterSpacing: 0 }}>
-          {owner}/
-        </Text>
-      )}
+      {owner && (<Text as="span" sx={{ opacity: 0.45, fontSize: '9px', fontWeight: 500, letterSpacing: 0 }}> {owner}/ </Text>)}
       <Text as="span">{short}</Text>
       {count != null && count > 0 && (
         <Text as="span" sx={{ ...MONO, fontSize: '9px', color: active ? 'accent.fg' : 'fg.subtle', opacity: active ? 1 : 0.7 }}>{count}</Text>
@@ -366,16 +287,10 @@ export function Toolbar({
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 <CheckIcon size={10} />Eligible
               </span>
-            ) : (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <XIcon size={10} />Ineligible
-              </span>
-            )}
+            ) : (<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}> <XIcon size={10} />Ineligible </span>)}
         </Pill>
       ))}
-      {trackedCount > 0 && (
-        <Pill active={tracksOnly} onClick={() => setTracksOnly(!tracksOnly)}>★ Tracked</Pill>
-      )}
+      {trackedCount > 0 && (<Pill active={tracksOnly} onClick={() => setTracksOnly(!tracksOnly)}>★ Tracked</Pill>)}
       {repoFilter && (
         <Box
           as="button"
@@ -407,22 +322,13 @@ export function Toolbar({
       )}
     </Box>
   );
-
   const resultText = totalItems === totalAll
     ? `${totalItems.toLocaleString()} miners`
     : `${totalItems.toLocaleString()} of ${totalAll.toLocaleString()}`;
-
   return (
     <Box sx={{ mt: 2, mb: 2 }}>
       {}
-      <Box
-        sx={{
-          display: ['none', null, 'flex'],
-          alignItems: 'center',
-          gap: 2,
-          flexWrap: 'wrap',
-        }}
-      >
+      <Box sx={{ display: ['none', null, 'flex'], alignItems: 'center', gap: 2, flexWrap: 'wrap', }} >
         {pills}
         <SortControl<SortKey>
           value={sortKey}
@@ -493,7 +399,6 @@ function HoverPeek({ uid, anchor }: { uid: number | string; anchor: PeekAnchor }
     staleTime: 25_000,
     enabled: true,
   });
-
   const recent = useMemo(() => {
     const prs = data?.prs ?? [];
     return [...prs]
@@ -504,16 +409,13 @@ function HoverPeek({ uid, anchor }: { uid: number | string; anchor: PeekAnchor }
       })
       .slice(0, 3);
   }, [data]);
-
   if (typeof document === 'undefined') return null;
-
   const popWidth = 360;
   const popHeightEstimate = 140;
   const viewportH = typeof window !== 'undefined' ? window.innerHeight : 0;
   const placeBelow = anchor.bottom + popHeightEstimate + 12 <= viewportH;
   const top = placeBelow ? anchor.bottom + 6 : Math.max(8, anchor.top - popHeightEstimate - 6);
   const left = Math.max(8, anchor.right - popWidth);
-
   return createPortal(
     <Box
       sx={{
@@ -532,9 +434,7 @@ function HoverPeek({ uid, anchor }: { uid: number | string; anchor: PeekAnchor }
       }}
     >
       <Text sx={{ ...LABEL, display: 'block', mb: 1 }}>Recent PRs</Text>
-      {(!data && isFetching) ? (
-        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Loading…</Text>
-      ) : recent.length === 0 ? (
+      {(!data && isFetching) ? (<Text sx={{ fontSize: 0, color: 'fg.muted' }}>Loading…</Text>) : recent.length === 0 ? (
         <Text sx={{ fontSize: 0, color: 'fg.subtle' }}>No PR data yet.</Text>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -599,11 +499,9 @@ function LeaderRow({
     credibility: { rate: cred, pct: credPct },
     lastActiveIso,
   } = summarizeRow(miner);
-
   const status = useMemo(() => deriveMinerStatus(miner, rank), [miner, rank]);
   const dailyLookback = miner.dailyLookback ?? [];
   const topRepos = miner.topRepos ?? [];
-
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [peekRect, setPeekRect] = useState<PeekAnchor | null>(null);
   const hoverTimer = useRef<number | null>(null);
@@ -628,7 +526,6 @@ function LeaderRow({
   useEffect(() => () => {
     if (hoverTimer.current != null) window.clearTimeout(hoverTimer.current);
   }, []);
-
   return (
     <Box
       ref={rowRef}
@@ -654,11 +551,7 @@ function LeaderRow({
       onFocus={handleEnter}
       onBlur={handleLeave}
     >
-      <Link
-        href={`/miners/${miner.uid}`}
-        prefetch={false}
-        style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-      >
+      <Link href={`/miners/${miner.uid}`} prefetch={false} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }} >
         <Box
           sx={{
             display: 'grid',
@@ -678,17 +571,7 @@ function LeaderRow({
             cursor: 'pointer',
           }}
         >
-          <Box
-            sx={{
-              gridArea: 'rank',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '2px',
-              lineHeight: 1,
-            }}
-          >
+          <Box sx={{ gridArea: 'rank', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', lineHeight: 1, }} >
             <Text
               sx={{
                 ...MONO,
@@ -702,35 +585,21 @@ function LeaderRow({
             </Text>
             <MovementCell currentRank={rank} previousRank={miner.previousRank} />
           </Box>
-
           <Box sx={{ gridArea: 'ident', minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <MinerIdentity miner={miner} avatarSize={22} showUid={true} />
-            {isTracked && (
-              <Text sx={{ color: 'fg.muted', fontSize: 0, lineHeight: 1, flexShrink: 0 }} title="Tracked">★</Text>
-            )}
+            {isTracked && (<Text sx={{ color: 'fg.muted', fontSize: 0, lineHeight: 1, flexShrink: 0 }} title="Tracked">★</Text>)}
             {status.kind !== 'none' && <StatusBadge status={status} />}
           </Box>
-
           <Box sx={{ gridArea: 'spark', display: ['none', null, 'flex'], alignItems: 'center', minWidth: 0 }}>
             <Sparkline values={dailyLookback} width={108} height={22} />
           </Box>
-
           <Box sx={{ gridArea: 'repos', display: ['none', null, 'flex'], alignItems: 'center', flexWrap: 'wrap', gap: '4px', minWidth: 0, pl: 2 }}>
-            {topRepos.length === 0 ? (
-              <Text sx={{ ...MONO, fontSize: '10px', color: 'fg.subtle' }}>—</Text>
-            ) : (
+            {topRepos.length === 0 ? (<Text sx={{ ...MONO, fontSize: '10px', color: 'fg.subtle' }}>—</Text>) : (
               topRepos.map((r) => (
-                <RepoChip
-                  key={r.name}
-                  fullName={r.name}
-                  count={r.count}
-                  active={repoFilter === r.name}
-                  onClick={onPickRepo}
-                />
+                <RepoChip key={r.name} fullName={r.name} count={r.count} active={repoFilter === r.name} onClick={onPickRepo} />
               ))
             )}
           </Box>
-
           <ContribCell
             merged={validMergedCount(miner)}
             solved={solvedTotal}
@@ -739,28 +608,18 @@ function LeaderRow({
             discScore={discScore}
             discEligible={!!miner.isIssueEligible}
           />
-
           <Box sx={{ gridArea: 'activity', display: ['flex', null, 'none'], alignItems: 'center', gap: '8px', minWidth: 0 }}>
             <Box sx={{ flexShrink: 0 }}>
               <Sparkline values={dailyLookback} width={60} height={18} />
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px', minWidth: 0 }}>
-              {topRepos.length === 0 ? (
-                <Text sx={{ ...MONO, fontSize: '10px', color: 'fg.subtle' }}>—</Text>
-              ) : (
+              {topRepos.length === 0 ? (<Text sx={{ ...MONO, fontSize: '10px', color: 'fg.subtle' }}>—</Text>) : (
                 topRepos.map((r) => (
-                  <RepoChip
-                    key={r.name}
-                    fullName={r.name}
-                    count={r.count}
-                    active={repoFilter === r.name}
-                    onClick={onPickRepo}
-                  />
+                  <RepoChip key={r.name} fullName={r.name} count={r.count} active={repoFilter === r.name} onClick={onPickRepo} />
                 ))
               )}
             </Box>
           </Box>
-
           <Box
             sx={{
               gridArea: 'cred',
@@ -775,43 +634,22 @@ function LeaderRow({
               {cred > 0 ? `${credPct}%` : '—'}
             </Text>
           </Box>
-
           <Box sx={{ gridArea: 'score', display: ['none', null, 'block'], textAlign: 'right', minWidth: 0 }}>
             <Text sx={{ ...MONO, fontSize: 1, fontWeight: 600, color: 'fg.default' }}>
               {combinedScore.toFixed(1)}
             </Text>
           </Box>
-
           <Box sx={{ gridArea: 'lastactive', display: ['none', null, 'flex'], justifyContent: 'flex-end', alignItems: 'center', minWidth: 0 }}>
             <Text sx={{ ...MONO, fontSize: 0, color: lastActiveIso ? 'fg.muted' : 'fg.subtle' }}>
               {lastActiveIso ? formatRelativeTime(lastActiveIso) : '—'}
             </Text>
           </Box>
-
           <Box sx={{ gridArea: 'usd', textAlign: 'right', minWidth: 0 }}>
-            <Text
-              sx={{
-                ...MONO,
-                fontSize: 1,
-                fontWeight: combinedUsd > 0 ? 700 : 400,
-                color: combinedUsd > 0 ? 'success.fg' : 'fg.muted',
-              }}
-            >
+            <Text sx={{ ...MONO, fontSize: 1, fontWeight: combinedUsd > 0 ? 700 : 400, color: combinedUsd > 0 ? 'success.fg' : 'fg.muted', }} >
               {combinedUsd > 0 ? formatUsd(combinedUsd, { style: 'compact' }) : '—'}
             </Text>
           </Box>
-
-          <Box
-            sx={{
-              gridArea: 'meta',
-              display: ['flex', null, 'none'],
-              alignItems: 'center',
-              gap: '10px',
-              pl: '4px',
-              minWidth: 0,
-              flexWrap: 'wrap',
-            }}
-          >
+          <Box sx={{ gridArea: 'meta', display: ['flex', null, 'none'], alignItems: 'center', gap: '10px', pl: '4px', minWidth: 0, flexWrap: 'wrap', }} >
             <DualTrackBar
               ossScore={ossScore}
               ossEligible={!!miner.isEligible}
@@ -843,13 +681,11 @@ function LeaderRow({
               </Text>
             )}
           </Box>
-
           <Box sx={{ gridArea: 'star', display: 'flex', justifyContent: 'center' }}>
             <TrackButton isTracked={isTracked} onClick={onToggleTrack} />
           </Box>
         </Box>
       </Link>
-
       {peekRect && <HoverPeek uid={miner.uid} anchor={peekRect} />}
     </Box>
   );
@@ -887,17 +723,8 @@ export function LeaderTable({
   const handlePickRepo = useCallback((repo: string) => {
     onPickRepo(repoFilter === repo ? null : repo);
   }, [repoFilter, onPickRepo]);
-
   return (
-    <Box
-      sx={{
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        overflow: 'hidden',
-        bg: 'canvas.default',
-      }}
-    >
+    <Box sx={{ border: '1px solid', borderColor: 'border.default', borderRadius: 2, overflow: 'hidden', bg: 'canvas.default', }} >
       <Box
         sx={{
           display: ['none', null, 'grid'],
@@ -922,13 +749,9 @@ export function LeaderTable({
         <ColumnHeader active={sortKey === 'active'} dir={sortDir} onClick={() => onSort('active')} title="Most recent OSS or Discovery activity">Last Active</ColumnHeader>
         <span />
       </Box>
-
       {loading ? (
         <Box sx={{ p: 2 }}>
-          <TableRowsSkeleton
-            rows={8}
-            cols={[{ width: 36 }, { flex: 1 }, { width: 70 }, { width: 110 }, { width: 70 }, { width: 60 }]}
-          />
+          <TableRowsSkeleton rows={8} cols={[{ width: 36 }, { flex: 1 }, { width: 70 }, { width: 110 }, { width: 70 }, { width: 60 }]} />
         </Box>
       ) : miners.length === 0 ? (
         <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted', fontSize: 1 }}>
@@ -953,7 +776,6 @@ export function LeaderTable({
           );
         })
       )}
-
       {filteredCount > 0 && (
         <Box
           sx={{
@@ -973,4 +795,3 @@ export function LeaderTable({
     </Box>
   );
 }
-

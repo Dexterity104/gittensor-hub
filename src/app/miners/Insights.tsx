@@ -9,14 +9,7 @@ import {
   validMergedCount, ratePct, isDualEligible, isAnyEligible, combinedScore,
 } from './components';
 
-function TipTile({
-  tip, direction, sx, children,
-}: {
-  tip: string | null;
-  direction: 'n' | 's';
-  sx: Record<string, unknown>;
-  children: React.ReactNode;
-}) {
+function TipTile({ tip, direction, sx, children }: { tip: string | null; direction: 'n' | 's'; sx: Record<string, unknown>; children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   function show() {
@@ -28,12 +21,7 @@ function TipTile({
     setPos(null);
   }
   return (
-    <Box
-      ref={ref}
-      sx={sx}
-      onMouseEnter={show}
-      onMouseLeave={hide}
-    >
+    <Box ref={ref} sx={sx} onMouseEnter={show} onMouseLeave={hide} >
       {children}
       {pos && tip && typeof document !== 'undefined' && createPortal(
         <Box
@@ -67,7 +55,6 @@ function TipTile({
 
 export function Insights({ miners, loading }: { miners: Miner[]; loading: boolean }) {
   const tiles = useMemo(() => buildTiles(miners, loading), [miners, loading]);
-
   return (
     <Box
       sx={{
@@ -141,30 +128,10 @@ function PulseTile({ tile }: { tile: PulseTileData }) {
   return (
     <TipTile tip={tip} direction="s" sx={TILE_SX}>
       <Text sx={LABEL_SX}>{tile.label}</Text>
-      <Text
-        sx={{
-          ...MONO,
-          fontSize: 2,
-          fontWeight: 700,
-          lineHeight: 1,
-          color: toneColor(tile.tone),
-          ...NOWRAP,
-          letterSpacing: '-0.01em',
-          flexShrink: 0,
-        }}
-      >
+      <Text sx={{ ...MONO, fontSize: 2, fontWeight: 700, lineHeight: 1, color: toneColor(tile.tone), ...NOWRAP, letterSpacing: '-0.01em', flexShrink: 0, }} >
         {tile.value}
       </Text>
-      <Text
-        sx={{
-          fontSize: '10px',
-          color: 'fg.muted',
-          ...ELLIPSIS,
-          ml: 'auto',
-          minWidth: 0,
-          textAlign: 'right',
-        }}
-      >
+      <Text sx={{ fontSize: '10px', color: 'fg.muted', ...ELLIPSIS, ml: 'auto', minWidth: 0, textAlign: 'right', }} >
         {tile.context}
       </Text>
     </TipTile>
@@ -176,24 +143,9 @@ function SpotlightTile({ tile, loading }: { tile: SpotlightTileData; loading: bo
     <TipTile tip={tile.sub || null} direction="n" sx={TILE_SX}>
       <Text sx={LABEL_SX}>{tile.label}</Text>
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}>
-        {tile.hero ?? (
-          <Text sx={{ fontSize: 0, color: 'fg.subtle', ...ELLIPSIS, }}>
-            {loading ? 'Loading…' : tile.emptyMessage}
-          </Text>
-        )}
+        {tile.hero ?? (<Text sx={{ fontSize: 0, color: 'fg.subtle', ...ELLIPSIS, }}> {loading ? 'Loading…' : tile.emptyMessage} </Text>)}
       </Box>
-      <Text
-        sx={{
-          ...MONO,
-          fontSize: 1,
-          fontWeight: 700,
-          lineHeight: 1,
-          color: toneColor(tile.tone),
-          ...NOWRAP,
-          letterSpacing: '-0.01em',
-          flexShrink: 0,
-        }}
-      >
+      <Text sx={{ ...MONO, fontSize: 1, fontWeight: 700, lineHeight: 1, color: toneColor(tile.tone), ...NOWRAP, letterSpacing: '-0.01em', flexShrink: 0, }} >
         {tile.metric}
       </Text>
     </TipTile>
@@ -205,16 +157,7 @@ function MinerHero({ miner }: { miner: Pick<Miner, 'uid' | 'githubUsername'> }) 
     <Link href={`/miners/${miner.uid}`} prefetch={false} style={{ textDecoration: 'none', color: 'inherit', minWidth: 0, display: 'block' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
         <MinerAvatar miner={miner} size={16} />
-        <Text
-          sx={{
-            fontSize: 1,
-            fontWeight: 600,
-            color: 'fg.default',
-            ...ELLIPSIS,
-            minWidth: 0,
-            '&:hover': { color: 'accent.fg' },
-          }}
-        >
+        <Text sx={{ fontSize: 1, fontWeight: 600, color: 'fg.default', ...ELLIPSIS, minWidth: 0, '&:hover': { color: 'accent.fg' }, }} >
           {ghName(miner)}
         </Text>
       </Box>
@@ -225,16 +168,7 @@ function MinerHero({ miner }: { miner: Pick<Miner, 'uid' | 'githubUsername'> }) 
 function RepoHero({ name }: { name: string }) {
   return (
     <Link href={`/repositories/${name}`} prefetch={false} style={{ textDecoration: 'none', color: 'inherit', minWidth: 0, display: 'block' }}>
-      <Text
-        sx={{
-          fontSize: 1,
-          fontWeight: 700,
-          color: 'fg.default',
-          ...ELLIPSIS,
-          display: 'block',
-          '&:hover': { color: 'accent.fg' },
-        }}
-      >
+      <Text sx={{ fontSize: 1, fontWeight: 700, color: 'fg.default', ...ELLIPSIS, display: 'block', '&:hover': { color: 'accent.fg' }, }} >
         {name}
       </Text>
     </Link>
@@ -289,9 +223,7 @@ function derivePulseSummary(miners: Miner[]): PulseSummary {
   };
 }
 
-function fmtUsd(n: number): string {
-  return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${Math.round(n)}`;
-}
+function fmtUsd(n: number): string { return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${Math.round(n)}`; }
 
 function buildTiles(miners: Miner[], loading: boolean): Tile[] {
   const s = derivePulseSummary(miners);
@@ -303,7 +235,6 @@ function buildTiles(miners: Miner[], loading: boolean): Tile[] {
     ? 'awaiting 14d'
     : `${trendArrow}${Math.abs(Math.round(trend))}% vs prior 7d`;
   const eligibleAny = s.ossEligible + s.discEligible - s.bothEligible;
-
   const pulses: PulseTileData[] = [
     {
       kind: 'pulse',
@@ -333,7 +264,6 @@ function buildTiles(miners: Miner[], loading: boolean): Tile[] {
       context: loading ? '' : s.avgCred == null ? 'none eligible' : 'avg eligible',
     },
   ];
-
   const spotlights: SpotlightTileData[] = loading
     ? [
         spotlightPlaceholder('Top earner'),
@@ -347,7 +277,6 @@ function buildTiles(miners: Miner[], loading: boolean): Tile[] {
         deriveDualTrack(miners),
         deriveHotRepo(miners),
       ];
-
   return [...pulses, ...spotlights];
 }
 
@@ -362,9 +291,7 @@ function spotlightEmpty(label: string, emptyMessage: string): SpotlightTileData 
   };
 }
 
-function spotlightPlaceholder(label: string): SpotlightTileData {
-  return spotlightEmpty(label, 'Loading…');
-}
+function spotlightPlaceholder(label: string): SpotlightTileData { return spotlightEmpty(label, 'Loading…'); }
 
 function deriveTopEarner(miners: Miner[]): SpotlightTileData {
   let best: Miner | null = null;

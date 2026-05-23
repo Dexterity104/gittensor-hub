@@ -43,11 +43,9 @@ export function ColumnHeader({
     pl,
     px,
   } as const;
-
   if (!onClick) {
     return <Text title={title} sx={baseSx}>{children}</Text>;
   }
-
   return (
     <Box
       as="button"

@@ -29,11 +29,7 @@ export interface IssueListProps {
 const ISSUE_COLS = 'auto minmax(0, 1fr) minmax(140px, 180px) 56px 64px 72px 100px 100px 20px';
 
 function IssueHdrLabel({ children, align = 'right' }: { children: string; align?: 'left' | 'right' }) {
-  return (
-    <Text sx={{ ...LABEL, color: 'fg.muted', textAlign: align, px: '4px', userSelect: 'none' }}>
-      {children}
-    </Text>
-  );
+  return (<Text sx={{ ...LABEL, color: 'fg.muted', textAlign: align, px: '4px', userSelect: 'none' }}> {children} </Text>);
 }
 
 function fmtDuration(ms: number): string {
@@ -60,9 +56,7 @@ export function IssueList({
     pageSize,
   );
   useEffect(() => { setPage(0); }, [issues, setPage]);
-
   if (issues.length === 0) return null;
-
   return (
     <>
     <Card>
@@ -72,11 +66,7 @@ export function IssueList({
         sub={sub}
         right={
           <>
-            <RowSizeSelector
-              value={pageSize}
-              onChange={(n) => { setPageSize(n); setPage(0); }}
-              showAll={false}
-            />
+            <RowSizeSelector value={pageSize} onChange={(n) => { setPageSize(n); setPage(0); }} showAll={false} />
             <SearchBox value={search} onChange={setSearch} placeholder="Search issues…" />
           </>
         }
@@ -133,22 +123,11 @@ export function IssueList({
           bg: 'canvas.subtle',
         }}
       >
-        <PageNav
-          page={page + 1}
-          pageSize={pageSize}
-          filteredCount={filtered.length}
-          onPage={(p) => setPage(p - 1)}
-        />
+        <PageNav page={page + 1} pageSize={pageSize} filteredCount={filtered.length} onPage={(p) => setPage(p - 1)} />
       </Box>
     </Card>
     {modalIss && (
-      <IssueModal
-        iss={modalIss}
-        discScoreScale={discScoreScale}
-        discEarnScale={discEarnScale}
-        repoEvalMap={repoEvalMap}
-        onClose={() => setModalIss(null)}
-      />
+      <IssueModal iss={modalIss} discScoreScale={discScoreScale} discEarnScale={discEarnScale} repoEvalMap={repoEvalMap} onClose={() => setModalIss(null)} />
     )}
     </>
   );
@@ -220,22 +199,18 @@ function IssueRow({
     : iss.bucket === 'completed' ? 'Completed'
     : iss.bucket === 'open' ? 'Open'
     : 'Closed';
-
   const ttcMs = iss.closedAt && iss.createdAt
     ? Date.parse(iss.closedAt) - Date.parse(iss.createdAt)
     : null;
   const lifetimeText = ttcMs != null && Number.isFinite(ttcMs) && ttcMs >= 0
     ? `in ${fmtDuration(ttcMs)}`
     : null;
-
   const repoEligible = !!repoEvalMap?.get(iss.repo.toLowerCase())?.isIssueEligible;
   const earningEligible = iss.bucket === 'solved' && repoEligible;
   const issueScore = earningEligible ? discScoreScale : 0;
   const issueUsdPerDay = earningEligible ? discEarnScale : 0;
-
   const href = iss.htmlUrl ?? `https://github.com/${iss.repo}/issues/${iss.number}`;
   const linkedPrs = parseLinkedPrs(iss.closedByPrs, iss.repo);
-
   const titleButton = (
     <Box
       as="button"
@@ -262,7 +237,6 @@ function IssueRow({
       {iss.title}
     </Box>
   );
-
   const linkedPrChips = linkedPrs.length > 0 && (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', mt: '2px', flexWrap: 'wrap', minWidth: 0 }}>
       <Text sx={{ fontSize: '10px', color: 'fg.subtle' }}>closed by</Text>
@@ -304,7 +278,6 @@ function IssueRow({
       )}
     </Box>
   );
-
   const githubLink = (
     <Box
       as="a"
@@ -324,7 +297,6 @@ function IssueRow({
       <LinkExternalIcon size={11} />
     </Box>
   );
-
   return (
     <Box
       sx={{
@@ -362,9 +334,7 @@ function IssueRow({
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
             <Box aria-hidden sx={{ width: 6, height: 6, borderRadius: 999 }} style={{ backgroundColor: stateColorVar }} />
             <Text sx={{ fontWeight: 700, fontSize: 0, lineHeight: 1 }} style={{ color: stateColorVar }}>{stateLabel}</Text>
-            {lifetimeText && (
-              <Text sx={{ ...MONO, fontSize: '10px', color: 'fg.muted' }}>{lifetimeText}</Text>
-            )}
+            {lifetimeText && (<Text sx={{ ...MONO, fontSize: '10px', color: 'fg.muted' }}>{lifetimeText}</Text>)}
           </Box>
           {iss.createdAt && (
             <>
@@ -379,28 +349,14 @@ function IssueRow({
               score <Box as="span" sx={{ ...MONO, fontWeight: 700, color: 'fg.default' }}>{issueScore.toFixed(2)}</Box>
             </Text>
             <Text sx={{ color: 'fg.subtle' }}>·</Text>
-            <Text
-              sx={{ ...MONO, fontSize: '10px', fontWeight: 700 }}
-              style={{ color: 'var(--success-fg)' }}
-            >
+            <Text sx={{ ...MONO, fontSize: '10px', fontWeight: 700 }} style={{ color: 'var(--success-fg)' }} >
               {formatUsd(issueUsdPerDay, { style: 'compact' })}/d
             </Text>
           </Box>
         )}
       </Box>
-
       {}
-      <Box
-        sx={{
-          display: ['none', null, 'grid'],
-          gridTemplateColumns: ISSUE_COLS,
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: '8px',
-          minHeight: 52,
-        }}
-      >
+      <Box sx={{ display: ['none', null, 'grid'], gridTemplateColumns: ISSUE_COLS, alignItems: 'center', gap: 2, px: 3, py: '8px', minHeight: 52, }} >
         <Box sx={{ color: stateColorSx, display: 'inline-flex' }}>
           <StateIcon size={13} />
         </Box>
@@ -409,15 +365,7 @@ function IssueRow({
           {linkedPrChips}
         </Box>
         <Box sx={{ minWidth: 0 }}>
-          <Text
-            sx={{
-              ...MONO,
-              fontSize: '10px',
-              color: 'fg.muted',
-              ...ELLIPSIS,
-            }}
-            title={`${iss.repo}#${iss.number}`}
-          >
+          <Text sx={{ ...MONO, fontSize: '10px', color: 'fg.muted', ...ELLIPSIS, }} title={`${iss.repo}#${iss.number}`} >
             {iss.repo}#{iss.number}
           </Text>
         </Box>
@@ -428,9 +376,7 @@ function IssueRow({
               <Box sx={{ color: 'fg.subtle', display: 'inline-flex' }}><CommentDiscussionIcon size={10} /></Box>
               <Text sx={{ ...MONO, fontSize: '11px', color: 'fg.default', fontWeight: 600 }}>{iss.comments}</Text>
             </Box>
-          ) : (
-            <Text sx={{ ...MONO, fontSize: '11px', color: 'fg.subtle' }}>—</Text>
-          )}
+          ) : (<Text sx={{ ...MONO, fontSize: '11px', color: 'fg.subtle' }}>—</Text>)}
         </Box>
         <Box
           sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}
@@ -440,11 +386,7 @@ function IssueRow({
               ? 'Only solved issues earn from the discovery pool'
               : 'Repo is not issue-eligible'}
         >
-          {issueScore > 0 ? (
-            <Text sx={{ ...MONO, fontSize: 0, fontWeight: 700, lineHeight: 1 }}>
-              {issueScore.toFixed(2)}
-            </Text>
-          ) : (
+          {issueScore > 0 ? (<Text sx={{ ...MONO, fontSize: 0, fontWeight: 700, lineHeight: 1 }}> {issueScore.toFixed(2)} </Text>) : (
             <Text sx={{ ...MONO, fontSize: '11px', color: 'fg.subtle' }}>—</Text>
           )}
         </Box>
@@ -455,15 +397,10 @@ function IssueRow({
             : 'No earning from this issue'}
         >
           {issueUsdPerDay > 0 ? (
-            <Text
-              sx={{ ...MONO, fontSize: 0, fontWeight: 700, lineHeight: 1 }}
-              style={{ color: 'var(--success-fg)' }}
-            >
+            <Text sx={{ ...MONO, fontSize: 0, fontWeight: 700, lineHeight: 1 }} style={{ color: 'var(--success-fg)' }} >
               {formatUsd(issueUsdPerDay, { style: 'compact' })}
             </Text>
-          ) : (
-            <Text sx={{ ...MONO, fontSize: '11px', color: 'fg.subtle' }}>—</Text>
-          )}
+          ) : (<Text sx={{ ...MONO, fontSize: '11px', color: 'fg.subtle' }}>—</Text>)}
         </Box>
         <Box
           sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', whiteSpace: 'nowrap' }}
@@ -483,9 +420,7 @@ function IssueRow({
             <Text sx={{ ...MONO, fontSize: '10px', color: 'fg.muted', lineHeight: 1 }}>
               {formatRelativeTime(iss.createdAt)}
             </Text>
-          ) : (
-            <Text sx={{ ...MONO, fontSize: '10px', color: 'fg.subtle' }}>—</Text>
-          )}
+          ) : (<Text sx={{ ...MONO, fontSize: '10px', color: 'fg.subtle' }}>—</Text>)}
         </Box>
         {githubLink}
       </Box>
@@ -527,7 +462,6 @@ function IssueModal({
   const linkedPrs = parseLinkedPrs(iss.closedByPrs, iss.repo);
   const titleId = useId();
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
-
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     closeBtnRef.current?.focus();
@@ -542,7 +476,6 @@ function IssueModal({
       previouslyFocused?.focus?.();
     };
   }, [onClose]);
-
   return (
     <Box
       sx={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: ['flex-end', null, 'center'], justifyContent: 'center', p: [0, null, 3] }}
@@ -612,7 +545,6 @@ function IssueModal({
             <XIcon size={12} />
           </Box>
         </Box>
-
         <Box sx={{ px: 3, py: 2, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', borderBottom: '1px solid', borderColor: 'border.muted' }}>
           <Metric label="Comments" value={iss.comments > 0 ? iss.comments.toLocaleString() : '—'} sub={iss.comments === 1 ? 'comment' : 'comments'} />
           <Metric
@@ -627,24 +559,15 @@ function IssueModal({
             sub={earningEligible ? 'predicted' : 'not earning'}
             tone={issueUsdPerDay > 0 ? 'success' : 'neutral'}
           />
-          <Metric
-            label="Opened"
-            value={iss.createdAt ? formatRelativeTime(iss.createdAt) : '—'}
-            sub={iss.createdAt ? iss.createdAt.slice(0, 10) : ''}
-          />
+          <Metric label="Opened" value={iss.createdAt ? formatRelativeTime(iss.createdAt) : '—'} sub={iss.createdAt ? iss.createdAt.slice(0, 10) : ''} />
           <Metric
             label="Closed"
             value={iss.closedAt ? formatRelativeTime(iss.closedAt) : '—'}
             sub={iss.closedAt ? iss.closedAt.slice(0, 10) : iss.bucket === 'open' ? 'still open' : '—'}
             tone={iss.closedAt ? 'done' : 'neutral'}
           />
-          <Metric
-            label="Time to close"
-            value={ttcText ?? '—'}
-            sub={ttcMs != null && ttcMs >= 0 ? 'open → closed' : '—'}
-          />
+          <Metric label="Time to close" value={ttcText ?? '—'} sub={ttcMs != null && ttcMs >= 0 ? 'open → closed' : '—'} />
         </Box>
-
         {linkedPrs.length > 0 && (
           <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'border.muted' }}>
             <Text sx={{ ...LABEL, mb: 1, display: 'block' }}>Closed by</Text>
@@ -682,7 +605,6 @@ function IssueModal({
             </Box>
           </Box>
         )}
-
         <Box sx={{ px: 3, py: 2, display: 'flex', justifyContent: 'center' }}>
           <Box
             as="a"

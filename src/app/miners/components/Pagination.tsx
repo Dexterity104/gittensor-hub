@@ -27,7 +27,6 @@ export function Pagination({
   const showRange = pageSize !== undefined;
   const start = finitePageSize ? (p1 - 1) * (pageSize as number) + 1 : 1;
   const end = finitePageSize ? Math.min(p1 * (pageSize as number), filtered) : filtered;
-
   return (
     <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
       {showRange && (
@@ -35,9 +34,7 @@ export function Pagination({
           {start.toLocaleString()}–{end.toLocaleString()}
           <Text as="span" sx={{ color: 'fg.subtle' }}> / </Text>
           {filtered.toLocaleString()}
-          {filtered !== total && (
-            <Text as="span" sx={{ color: 'fg.subtle' }}> of {total.toLocaleString()}</Text>
-          )}
+          {filtered !== total && (<Text as="span" sx={{ color: 'fg.subtle' }}> of {total.toLocaleString()}</Text>)}
         </Text>
       )}
       {!showRange && filtered !== total && (
@@ -60,15 +57,7 @@ export function Pagination({
   );
 }
 
-function NavBtn({
-  disabled,
-  onClick,
-  children,
-}: {
-  disabled: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
+function NavBtn({ disabled, onClick, children }: { disabled: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <Box
       as="button"
@@ -123,7 +112,6 @@ export function RowSizeSelector({
 }) {
   const showCount = typeof total === 'number' && typeof filtered === 'number';
   const selectValue = value === Infinity ? 'all' : String(value);
-
   return (
     <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
       <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
@@ -165,9 +153,7 @@ export function RowSizeSelector({
             '&:hover': { borderColor: 'border.muted' },
           }}
         >
-          {options.map((n) => (
-            <option key={n} value={String(n)}>{n}</option>
-          ))}
+          {options.map((n) => (<option key={n} value={String(n)}>{n}</option>))}
           {showAll && <option value="all">All</option>}
         </Box>
       </Box>
@@ -175,26 +161,14 @@ export function RowSizeSelector({
         <Text sx={{ ...MONO, fontSize: 0, color: 'fg.subtle' }}>
           {'/ '}
           <Text as="span" sx={{ color: 'fg.muted' }}>{filtered!.toLocaleString()}</Text>
-          {filtered !== total && (
-            <Text as="span">{` of ${total!.toLocaleString()}`}</Text>
-          )}
+          {filtered !== total && (<Text as="span">{` of ${total!.toLocaleString()}`}</Text>)}
         </Text>
       )}
     </Box>
   );
 }
 
-export function PageNav({
-  page,
-  pageSize,
-  filteredCount,
-  onPage,
-}: {
-  page: number;
-  pageSize: number;
-  filteredCount: number;
-  onPage: (p: number) => void;
-}) {
+export function PageNav({ page, pageSize, filteredCount, onPage }: { page: number; pageSize: number; filteredCount: number; onPage: (p: number) => void }) {
   if (filteredCount === 0) {
     return <Text sx={{ ...MONO, fontSize: 0, color: 'fg.muted' }}>0 of 0</Text>;
   }
@@ -222,17 +196,7 @@ export function PageNav({
   );
 }
 
-function PageBtn({
-  onClick,
-  disabled,
-  aria,
-  children,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  aria: string;
-  children: React.ReactNode;
-}) {
+function PageBtn({ onClick, disabled, aria, children }: { onClick: () => void; disabled?: boolean; aria: string; children: React.ReactNode }) {
   return (
     <Box
       as="button"

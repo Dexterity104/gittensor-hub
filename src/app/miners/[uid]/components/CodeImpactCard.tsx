@@ -16,17 +16,13 @@ export interface CodeImpactCardProps {
 
 export function CodeImpactCard({ prAgg, miner }: CodeImpactCardProps) {
   const totalChanged = prAgg.additions + prAgg.deletions;
-  let ratio = 0;
-  if (totalChanged > 0) {
-    ratio = (prAgg.additions / totalChanged) * 100;
-  }
+  const ratio = totalChanged > 0 ? (prAgg.additions / totalChanged) * 100 : 0;
   const addPct = Math.round(ratio);
   const delPct = 100 - addPct;
   const net = prAgg.additions - prAgg.deletions;
   const lifetimeAdded = miner?.totalAdditions ?? 0;
   const lifetimeDeleted = miner?.totalDeletions ?? 0;
   const lifetimeRepos = miner?.uniqueReposCount ?? 0;
-
   return (
     <Card>
       <CardHeader
@@ -35,18 +31,8 @@ export function CodeImpactCard({ prAgg, miner }: CodeImpactCardProps) {
         sub={`${prAgg.uniqueRepos} repo${prAgg.uniqueRepos === 1 ? '' : 's'} · ${prAgg.total} PR${prAgg.total === 1 ? '' : 's'}`}
       />
       <Box sx={{ display: 'flex', alignItems: 'stretch', bg: 'canvas.default', borderBottom: '1px solid', borderColor: 'border.muted' }}>
-        <HeroTile
-          label="Added"
-          value={`+${prAgg.additions.toLocaleString()}`}
-          sub={totalChanged > 0 ? `${addPct}% of diff` : 'no changes'}
-          tone="success"
-        />
-        <HeroTile
-          label="Removed"
-          value={`−${prAgg.deletions.toLocaleString()}`}
-          sub={totalChanged > 0 ? `${delPct}% of diff` : '—'}
-          tone="danger"
-        />
+        <HeroTile label="Added" value={`+${prAgg.additions.toLocaleString()}`} sub={totalChanged > 0 ? `${addPct}% of diff` : 'no changes'} tone="success" />
+        <HeroTile label="Removed" value={`−${prAgg.deletions.toLocaleString()}`} sub={totalChanged > 0 ? `${delPct}% of diff` : '—'} tone="danger" />
         <HeroTile
           label="Net"
           value={`${net >= 0 ? '+' : '−'}${Math.abs(net).toLocaleString()}`}
@@ -76,15 +62,7 @@ export function CodeImpactCard({ prAgg, miner }: CodeImpactCardProps) {
 
 function DiffSplit({ addPct, delPct }: { addPct: number; delPct: number }) {
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        width: '100%',
-        height: '1.6em',
-      }}
-    >
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', height: '1.6em', }} >
       <Box sx={{ flex: 1, height: 8, borderRadius: 999, overflow: 'hidden', display: 'flex', bg: 'border.muted', minWidth: 0 }}>
         <Box style={{ width: `${addPct}%`, backgroundColor: 'var(--success-fg)' }} />
         <Box style={{ width: `${delPct}%`, backgroundColor: 'var(--danger-fg)' }} />

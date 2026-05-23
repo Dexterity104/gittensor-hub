@@ -25,9 +25,7 @@ export const STATUS_REGISTRY: Record<Exclude<MinerStatusKind, 'none'>, Omit<Mine
 
 export const STATUS_NONE: MinerStatus = { kind: 'none', icon: '', label: '', hint: '' };
 
-export function makeStatus(kind: Exclude<MinerStatusKind, 'none'>): MinerStatus {
-  return { kind, ...STATUS_REGISTRY[kind] };
-}
+export function makeStatus(kind: Exclude<MinerStatusKind, 'none'>): MinerStatus { return { kind, ...STATUS_REGISTRY[kind] }; }
 
 export function deriveMinerStatus(miner: Miner, currentRank: number): MinerStatus {
   const daily = miner.dailyLookback ?? [];
@@ -37,7 +35,6 @@ export function deriveMinerStatus(miner: Miner, currentRank: number): MinerStatu
   const uniqueRepos = miner.uniqueReposCount ?? 0;
   const prevRank = miner.previousRank ?? null;
   const climbedBy = prevRank != null ? prevRank - currentRank : 0;
-
   if (recent3 >= 3) return makeStatus('hot');
   if (climbedBy >= 3) return makeStatus('climbing');
   if (recent14 === 0) return makeStatus('dormant');

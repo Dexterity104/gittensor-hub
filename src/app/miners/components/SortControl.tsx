@@ -53,9 +53,7 @@ export function SortControl<K extends string>({
           '&:focus-visible': { outline: '1px solid var(--fg-default)', outlineOffset: '1px' },
         }}
       >
-        {options.map((o) => (
-          <option key={o.key} value={o.key}>{o.label}</option>
-        ))}
+        {options.map((o) => (<option key={o.key} value={o.key}>{o.label}</option>))}
       </Box>
       <Box
         as="button"

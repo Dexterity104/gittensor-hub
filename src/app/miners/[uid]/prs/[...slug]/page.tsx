@@ -61,12 +61,8 @@ const CHART_W = 480, CHART_H = 160;
 const SVG_W = PAD_L + CHART_W + PAD_R;
 const SVG_H = PAD_T + CHART_H + PAD_B;
 
-function xOf(d: number): number {
-  return PAD_L + (Math.min(d, LOOKBACK) / LOOKBACK) * CHART_W;
-}
-function yOf(v: number): number {
-  return PAD_T + CHART_H * (1 - Math.max(0, Math.min(1, v)));
-}
+function xOf(d: number): number { return PAD_L + (Math.min(d, LOOKBACK) / LOOKBACK) * CHART_W; }
+function yOf(v: number): number { return PAD_T + CHART_H * (1 - Math.max(0, Math.min(1, v))); }
 
 const STEPS = 140;
 const _pts = Array.from({ length: STEPS + 1 }, (_, i) => {
@@ -82,20 +78,13 @@ const GRACE_X = xOf(DECAY.graceHours / 24);
 const Y_GRID = [0, 0.25, 0.5, 0.75, 1.0];
 const X_TICKS = [0, 7, 14, 21, LOOKBACK];
 
-function TimeDecayChart({
-  daysSinceMerge,
-  actualMultiplier,
-}: {
-  daysSinceMerge: number;
-  actualMultiplier: number | null;
-}) {
+function TimeDecayChart({ daysSinceMerge, actualMultiplier }: { daysSinceMerge: number; actualMultiplier: number | null }) {
   const nowDays = Math.max(0, daysSinceMerge);
   const clamped = Math.min(nowDays, LOOKBACK);
   const nowX = xOf(clamped);
   const modelMult = decayAt(clamped);
   const nowY = yOf(modelMult);
   const isPast = nowDays > LOOKBACK;
-
   return (
     <Card>
       <CardHeader
@@ -121,10 +110,8 @@ function TimeDecayChart({
               <stop offset="100%" stopColor="var(--accent-fg)" stopOpacity="0.02" />
             </linearGradient>
           </defs>
-
           <rect x={PAD_L} y={PAD_T} width={GRACE_X - PAD_L} height={CHART_H}
                 fill="var(--success-fg)" opacity={0.14} />
-
           {Y_GRID.map((v) => {
             const y = yOf(v);
             return (
@@ -138,7 +125,6 @@ function TimeDecayChart({
               </g>
             );
           })}
-
           {X_TICKS.map((d) => {
             const x = xOf(d);
             return (
@@ -152,19 +138,15 @@ function TimeDecayChart({
               </g>
             );
           })}
-
           <rect x={PAD_L} y={PAD_T} width={CHART_W} height={CHART_H}
                 fill="none" stroke="var(--border-muted)" strokeWidth="1" />
-
           <path d={FILL_PATH} fill="url(#tdc-fill)" />
           <path d={CURVE_PATH} fill="none" stroke="var(--accent-fg)" strokeWidth="1.8" strokeLinejoin="round" />
-
           <text x={PAD_L + (GRACE_X - PAD_L) / 2} y={PAD_T + 12}
                 textAnchor="middle" fontSize="9"
                 fill="var(--success-fg)" fontFamily="monospace">
             grace
           </text>
-
           {!isPast && (
             <>
               <line x1={nowX} y1={PAD_T} x2={nowX} y2={PAD_T + CHART_H}
@@ -177,7 +159,6 @@ function TimeDecayChart({
                       stroke="var(--bg-subtle, #161b22)" strokeWidth="2" />
             </>
           )}
-
           {actualMultiplier != null && !isPast && Math.abs((actualMultiplier - modelMult)) > 0.01 && (
             <circle cx={nowX} cy={yOf(actualMultiplier)} r={3.5}
                     fill="var(--success-fg)" stroke="var(--bg-subtle, #161b22)" strokeWidth="1.5" />
@@ -237,11 +218,7 @@ function PrStat({
       >
         {value}
       </Text>
-      {sub && (
-        <Text sx={{ display: 'block', fontSize: '10px', color: 'fg.subtle', mt: '2px', ...ELLIPSIS, }}>
-          {sub}
-        </Text>
-      )}
+      {sub && (<Text sx={{ display: 'block', fontSize: '10px', color: 'fg.subtle', mt: '2px', ...ELLIPSIS, }}> {sub} </Text>)}
     </Box>
   );
 }
@@ -286,7 +263,6 @@ export default function PrDetailPage({
   const [owner, repo, prNumStr] = slug ?? [];
   const repoFull = owner && repo ? `${owner}/${repo}` : '';
   const prNumber = parseInt(prNumStr ?? '', 10);
-
   const { data, isError, isLoading } = useQuery<DetailResp>({
     queryKey: ['miner-detail', uid],
     queryFn: async () => {
@@ -295,16 +271,13 @@ export default function PrDetailPage({
       return r.json();
     },
   });
-
   const pr = useMemo(
     () => data?.prs.find((p) => p.repository === repoFull && p.pullRequestNumber === prNumber) ?? null,
     [data, repoFull, prNumber],
   );
-
   const miner = data?.miner;
   const ghName = miner?.githubUsername ?? `uid-${uid}`;
   const ghHref = `https://github.com/${repoFull}/pull/${prNumber}`;
-
   const stateColor =
     pr?.prState === 'MERGED' ? 'done.fg'
     : pr?.prState === 'OPEN'   ? 'success.fg'
@@ -315,17 +288,14 @@ export default function PrDetailPage({
     : GitPullRequestClosedIcon;
   const stateTone: 'done' | 'success' | 'danger' =
     pr?.prState === 'MERGED' ? 'done' : pr?.prState === 'OPEN' ? 'success' : 'danger';
-
   const daysSinceMerge = pr?.mergedAt
     ? (Date.now() - Date.parse(pr.mergedAt)) / (1000 * 60 * 60 * 24)
     : null;
-
   const scoreDisplay = pr
     ? pr.realScore > 0 ? pr.realScore.toFixed(4)
       : pr.collateralScore > 0 ? pr.collateralScore.toFixed(4)
       : '0'
     : '—';
-
   if (isError || (!isLoading && data && !pr)) {
     return (
       <PageLayout containerWidth="full" padding="normal">
@@ -336,23 +306,12 @@ export default function PrDetailPage({
       </PageLayout>
     );
   }
-
   return (
     <PageLayout containerWidth="full" padding="normal">
       <PageLayout.Header>
         <BackToMiner uid={uid} name={ghName} />
-
         {pr && (
-          <Box
-            sx={{
-              mt: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-              borderRadius: 2,
-              bg: 'canvas.subtle',
-              overflow: 'hidden',
-            }}
-          >
+          <Box sx={{ mt: 2, border: '1px solid', borderColor: 'border.default', borderRadius: 2, bg: 'canvas.subtle', overflow: 'hidden', }} >
             <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
                 <Box sx={{ color: stateColor, mt: '4px', flexShrink: 0 }}>
@@ -398,17 +357,7 @@ export default function PrDetailPage({
                   <LinkExternalIcon size={10} />
                 </Box>
               </Box>
-
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  flexWrap: 'wrap',
-                  pl: '26px',
-                  fontSize: 0,
-                }}
-              >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', pl: '26px', fontSize: 0, }} >
                 <Text sx={{ ...MONO, color: 'fg.muted' }}>
                   {pr.repository}#{pr.pullRequestNumber}
                 </Text>
@@ -434,7 +383,6 @@ export default function PrDetailPage({
                 )}
               </Box>
             </Box>
-
             <Box
               sx={{
                 display: 'grid',
@@ -451,12 +399,7 @@ export default function PrDetailPage({
                 tone="success"
                 icon={<DiffAddedIcon size={11} />}
               />
-              <PrStat
-                label="Removed"
-                value={`−${pr.deletions.toLocaleString()}`}
-                tone="danger"
-                icon={<DiffRemovedIcon size={11} />}
-              />
+              <PrStat label="Removed" value={`−${pr.deletions.toLocaleString()}`} tone="danger" icon={<DiffRemovedIcon size={11} />} />
               <PrStat
                 label="Score"
                 value={scoreDisplay}
@@ -468,12 +411,7 @@ export default function PrDetailPage({
                   : '—'
                 }
               />
-              <PrStat
-                label="Earned"
-                value={pr.earnedScore != null ? num(pr.earnedScore).toFixed(4) : '—'}
-                icon={<TrophyIcon size={11} />}
-                tone="accent"
-              />
+              <PrStat label="Earned" value={pr.earnedScore != null ? num(pr.earnedScore).toFixed(4) : '—'} icon={<TrophyIcon size={11} />} tone="accent" />
               <PrStat
                 label="$/Day"
                 value={pr.predictedUsdPerDay > 0 ? formatUsd(pr.predictedUsdPerDay, { style: 'compact' }) : '—'}
@@ -490,7 +428,6 @@ export default function PrDetailPage({
             </Box>
           </Box>
         )}
-
         {isLoading && !pr && (
           <Box
             sx={{
@@ -508,7 +445,6 @@ export default function PrDetailPage({
           </Box>
         )}
       </PageLayout.Header>
-
       <PageLayout.Content>
         {pr && pr.prState === 'MERGED' && daysSinceMerge != null && (
           <Box sx={{ mt: 3 }}>

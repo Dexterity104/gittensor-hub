@@ -22,26 +22,17 @@ export interface TrendSummary {
   trendText: string;
 }
 
-export function computeSparklinePath(
-  values: readonly number[],
-  layout: SparklineLayout,
-): SparklinePath {
+export function computeSparklinePath(values: readonly number[], layout: SparklineLayout): SparklinePath {
   const { width, height, padV = 2 } = layout;
   const cols = values.length;
-  let max = 0;
-  if (cols > 0) {
-    max = Math.max(...values);
-  }
-
+  const max = cols > 0 ? Math.max(...values) : 0;
   const points: SparklinePoint[] = values.map((v, i) => ({
     x: cols > 1 ? (i / (cols - 1)) * (width - 1) : (width - 1) / 2,
     y: padV + (max > 0 ? 1 - v / max : 1) * (height - padV * 2),
   }));
-
   const linePoints = points
     .map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`)
     .join(' ');
-
   const areaD = points.length === 0
     ? ''
     : [
@@ -50,7 +41,6 @@ export function computeSparklinePath(
         `L${points[points.length - 1].x.toFixed(1)},${height}`,
         'Z',
       ].join(' ');
-
   return { points, linePoints, areaD };
 }
 
@@ -60,7 +50,6 @@ export function summarizeTrend(values: readonly number[]): TrendSummary {
   const prior7 = cols >= 14
     ? values.slice(-14, -7).reduce((a, b) => a + b, 0)
     : null;
-
   let trendText = '';
   if (prior7 != null) {
     if (prior7 === 0 && last7 > 0) {
@@ -71,6 +60,5 @@ export function summarizeTrend(values: readonly number[]): TrendSummary {
       trendText = ` · ${arrow}${pct}% vs prior 7d`;
     }
   }
-
   return { last7, prior7, trendText };
 }

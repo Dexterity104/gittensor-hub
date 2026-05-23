@@ -11,17 +11,7 @@ export interface SegmentOption<K extends string> {
   count?: number;
 }
 
-export function Segmented<K extends string>({
-  options,
-  value,
-  onChange,
-  ariaLabel,
-}: {
-  options: SegmentOption<K>[];
-  value: K;
-  onChange: (k: K) => void;
-  ariaLabel?: string;
-}) {
+export function Segmented<K extends string>({ options, value, onChange, ariaLabel }: { options: SegmentOption<K>[]; value: K; onChange: (k: K) => void; ariaLabel?: string }) {
   return (
     <Box
       role="group"

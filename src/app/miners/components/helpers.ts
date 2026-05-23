@@ -2,29 +2,15 @@ import type React from 'react';
 import type { Miner, MinerView, Mode } from './types';
 
 export function num(v: unknown): number {
-  let n: number;
-  if (typeof v === 'string') {
-    n = parseFloat(v);
-  } else if (typeof v === 'number') {
-    n = v;
-  } else {
-    n = 0;
-  }
-  if (!Number.isFinite(n)) return 0;
-  return n;
+  const n = typeof v === 'string' ? parseFloat(v) : typeof v === 'number' ? v : 0;
+  return Number.isFinite(n) ? n : 0;
 }
 
-export function ghKey(name: string | null | undefined): string {
-  return (name ?? '').toLowerCase();
-}
+export function ghKey(name: string | null | undefined): string { return (name ?? '').toLowerCase(); }
 
-export function ghName(m: Pick<Miner, 'githubUsername' | 'uid'>): string {
-  return m.githubUsername || `uid-${m.uid}`;
-}
+export function ghName(m: Pick<Miner, 'githubUsername' | 'uid'>): string { return m.githubUsername || `uid-${m.uid}`; }
 
-export function ghAvatar(m: Pick<Miner, 'githubUsername' | 'uid'>, size: number): string {
-  return `https://github.com/${ghName(m)}.png?size=${size}`;
-}
+export function ghAvatar(m: Pick<Miner, 'githubUsername' | 'uid'>, size: number): string { return `https://github.com/${ghName(m)}.png?size=${size}`; }
 
 export function splitEarnings(
   usdPerDay: number,
@@ -49,28 +35,22 @@ export function splitEarnings(
 
 function acceptanceRate(positive: number, closed: number): number {
   const denom = positive + closed;
-  if (denom <= 0) return 0;
-  return positive / denom;
+  return denom > 0 ? positive / denom : 0;
 }
 
 export function viewOf(m: Miner, mode: Mode): MinerView {
   const ossScore = num(m.totalScore);
   const issueScore = num(m.issueDiscoveryScore);
-  const { oss: ossUsd, disc: discUsd } = splitEarnings(
-    num(m.usdPerDay), ossScore, issueScore, !!m.isEligible, !!m.isIssueEligible,
-  );
-
+  const { oss: ossUsd, disc: discUsd } = splitEarnings(num(m.usdPerDay), ossScore, issueScore, !!m.isEligible, !!m.isIssueEligible);
   const ossEligible = !!m.isEligible;
   const issueEligible = !!m.isIssueEligible;
   const combinedScore = ossScore + issueScore;
-
   const merged = m.totalMergedPrs ?? 0;
   const closedPr = m.totalClosedPrs ?? 0;
   const solved = m.totalSolvedIssues ?? 0;
   const closedIssue = m.totalClosedIssues ?? 0;
   const ossCred = acceptanceRate(merged, closedPr);
   const issueCred = acceptanceRate(solved, closedIssue);
-
   if (mode === 'discovery') {
     return {
       mode,
@@ -118,9 +98,7 @@ export function viewOf(m: Miner, mode: Mode): MinerView {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function credColor(_v: number): string {
-  return 'var(--fg-default)';
-}
+export function credColor(_v: number): string { return 'var(--fg-default)'; }
 
 export interface MinerCounts {
   merged: number;
@@ -154,33 +132,22 @@ export function countsFor(m: Miner): MinerCounts {
 
 export function credibilityFor(counts: MinerCounts): MinerCredibility {
   const denom = counts.merged + counts.solved + counts.closedTotal;
-  let rate = 0;
-  if (denom > 0) {
-    rate = (counts.merged + counts.solved) / denom;
-  }
+  const rate = denom > 0 ? (counts.merged + counts.solved) / denom : 0;
   return { rate, pct: clampedPct(rate), denom };
 }
 
-export function validMergedCount(m: Pick<Miner, 'totalValidMergedPrs' | 'totalMergedPrs'>): number {
-  return m.totalValidMergedPrs ?? m.totalMergedPrs ?? 0;
-}
+export function validMergedCount(m: Pick<Miner, 'totalValidMergedPrs' | 'totalMergedPrs'>): number { return m.totalValidMergedPrs ?? m.totalMergedPrs ?? 0; }
 
-export function combinedScore(m: Pick<Miner, 'totalScore' | 'issueDiscoveryScore'>): number {
-  return num(m.totalScore) + num(m.issueDiscoveryScore);
-}
+export function combinedScore(m: Pick<Miner, 'totalScore' | 'issueDiscoveryScore'>): number { return num(m.totalScore) + num(m.issueDiscoveryScore); }
 
 export interface EligibilityFlags {
   isEligible?: boolean | null;
   isIssueEligible?: boolean | null;
 }
 
-export function isDualEligible(m: EligibilityFlags): boolean {
-  return !!m.isEligible && !!m.isIssueEligible;
-}
+export function isDualEligible(m: EligibilityFlags): boolean { return !!m.isEligible && !!m.isIssueEligible; }
 
-export function isAnyEligible(m: EligibilityFlags): boolean {
-  return !!m.isEligible || !!m.isIssueEligible;
-}
+export function isAnyEligible(m: EligibilityFlags): boolean { return !!m.isEligible || !!m.isIssueEligible; }
 
 export function latestActivity(m: Pick<Miner, 'lastOssActivityAt' | 'lastDiscoveryActivityAt'>): string | null {
   const a = m.lastOssActivityAt ?? null;
@@ -199,23 +166,12 @@ export function ratePctOrNull(numerator: number, denominator: number): number | 
   return Math.round((numerator / denominator) * 100);
 }
 
-export function blendedCredibility(
-  ossScore: number,
-  ossCred: number,
-  discScore: number,
-  discCred: number,
-): number {
+export function blendedCredibility(ossScore: number, ossCred: number, discScore: number, discCred: number): number {
   const total = ossScore + discScore;
-  if (total > 0) {
-    return (ossScore * ossCred + discScore * discCred) / total;
-  }
-  return (ossCred + discCred) / 2;
+  return total > 0 ? (ossScore * ossCred + discScore * discCred) / total : (ossCred + discCred) / 2;
 }
 
-export function clampedPct(fraction: number): number {
-  return Math.round(Math.max(0, Math.min(1, fraction)) * 100);
-}
-
+export function clampedPct(fraction: number): number { return Math.round(Math.max(0, Math.min(1, fraction)) * 100); }
 
 export function stopPropagation(e: React.MouseEvent<HTMLElement>): void {
   e.stopPropagation();

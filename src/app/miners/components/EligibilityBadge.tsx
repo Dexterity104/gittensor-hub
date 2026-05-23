@@ -22,15 +22,7 @@ export function EligibilityDot({ eligible, title }: { eligible: boolean; title?:
   );
 }
 
-export function EligibilityBadge({
-  eligible,
-  label,
-  size = 'sm',
-}: {
-  eligible: boolean;
-  label: string;
-  size?: 'sm' | 'md';
-}) {
+export function EligibilityBadge({ eligible, label, size = 'sm' }: { eligible: boolean; label: string; size?: 'sm' | 'md' }) {
   const pad = size === 'md' ? { px: '8px', py: '3px', fz: '11px' } : { px: '6px', py: '2px', fz: '10px' };
   return (
     <Box

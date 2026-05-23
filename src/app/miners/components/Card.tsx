@@ -3,15 +3,7 @@
 import React from 'react';
 import { Box, Text } from '@primer/react';
 
-export function Card({
-  children,
-  pad = false,
-  inset = false,
-}: {
-  children: React.ReactNode;
-  pad?: boolean;
-  inset?: boolean;
-}) {
+export function Card({ children, pad = false, inset = false }: { children: React.ReactNode; pad?: boolean; inset?: boolean }) {
   return (
     <Box
       sx={{
@@ -28,17 +20,7 @@ export function Card({
   );
 }
 
-export function CardHeader({
-  icon,
-  title,
-  sub,
-  right,
-}: {
-  icon?: React.ReactNode;
-  title: React.ReactNode;
-  sub?: React.ReactNode;
-  right?: React.ReactNode;
-}) {
+export function CardHeader({ icon, title, sub, right }: { icon?: React.ReactNode; title: React.ReactNode; sub?: React.ReactNode; right?: React.ReactNode }) {
   return (
     <Box
       sx={{
@@ -56,9 +38,7 @@ export function CardHeader({
     >
       {icon && <Box sx={{ color: 'fg.muted', display: 'inline-flex' }}>{icon}</Box>}
       <Text sx={{ fontSize: 1, fontWeight: 700, letterSpacing: '-0.005em' }}>{title}</Text>
-      {sub && (
-        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>· {sub}</Text>
-      )}
+      {sub && (<Text sx={{ fontSize: 0, color: 'fg.muted' }}>· {sub}</Text>)}
       {right && <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>{right}</Box>}
     </Box>
   );

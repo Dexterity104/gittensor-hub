@@ -52,21 +52,17 @@ export function PositionSummary({
   const combinedScore = totalScore + issueScore;
   const blendedCred = blendedCredibility(totalScore, cred, issueScore, issueCred);
   const credPct = clampedPct(blendedCred);
-
   const lifetimeDisplay = lifetimeUsd > 0
     ? formatUsd(lifetimeUsd, { style: 'compact' })
     : lifetimeTao > 0
       ? `${lifetimeTao.toFixed(2)}τ`
       : '—';
-
   const totalChanges = (totalAdditions ?? 0) + (totalDeletions ?? 0);
   const totalIssues  = (totalSolvedIssues ?? 0) + (totalClosedIssues ?? 0) + (totalOpenIssues ?? 0);
-
   const ossPct = (ossEarningPerDay + discEarningPerDay) > 0
     ? (ossEarningPerDay / (ossEarningPerDay + discEarningPerDay)) * 100
     : 0;
   const discPct = 100 - ossPct;
-
   return (
     <Box
       sx={{
@@ -81,16 +77,7 @@ export function PositionSummary({
         ],
       }}
     >
-      <Tile
-        sx={{
-          gridColumn: [
-            '1 / -1',
-            null,
-            '1 / -1',
-            'span 2',
-          ],
-        }}
-      >
+      <Tile sx={{ gridColumn: [ '1 / -1', null, '1 / -1', 'span 2', ], }} >
         <TileHeader icon={<ZapIcon size={11} />} label="Earnings / day" tone="success" />
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2, mt: '6px', flexWrap: 'wrap' }}>
           <Text
@@ -166,7 +153,6 @@ export function PositionSummary({
           </Text>
         </Box>
       </Tile>
-
       <Tile>
         <TileHeader icon={<TrophyIcon size={11} />} label="Score" />
         <BigNumber value={loading ? '—' : combinedScore > 0 ? combinedScore.toFixed(2) : '0'} />
@@ -176,7 +162,6 @@ export function PositionSummary({
           <SubStat label="DISC" value={loading ? '—' : issueScore.toFixed(2)} accent="disc" />
         </Subs>
       </Tile>
-
       <Tile>
         <TileHeader icon={<ShieldCheckIcon size={11} />} label={`Credibility${winSuffix}`} />
         <BigNumber
@@ -185,11 +170,7 @@ export function PositionSummary({
         />
         {!loading && (cred + issueCred) > 0 && (
           <Box sx={{ mt: '4px' }}>
-            <IntensityBar
-              value={Math.max(0, Math.min(1, blendedCred))}
-              height={3}
-              tone={credPct >= 80 ? 'success' : credPct >= 50 ? 'neutral' : 'danger'}
-            />
+            <IntensityBar value={Math.max(0, Math.min(1, blendedCred))} height={3} tone={credPct >= 80 ? 'success' : credPct >= 50 ? 'neutral' : 'danger'} />
           </Box>
         )}
         <Subs>
@@ -197,7 +178,6 @@ export function PositionSummary({
           <SubStat label="DISC" value={loading ? '—' : `${Math.round(issueCred * 100)}%`} accent="disc" />
         </Subs>
       </Tile>
-
       <Tile>
         <TileHeader icon={<PulseIcon size={11} />} label={`Activity${winSuffix}`} />
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '10px', mt: '6px', flexWrap: 'wrap' }}>
@@ -232,12 +212,9 @@ export function PositionSummary({
                 </Text>
               </Box>
             </Box>
-          ) : (
-            <SubStat label="Lines" value="—" />
-          )}
+          ) : (<SubStat label="Lines" value="—" />)}
         </Subs>
       </Tile>
-
       <Tile last>
         <TileHeader icon={<RepoIcon size={11} />} label="Eligible repos" />
         <BigNumber value={loading ? '—' : `${uniqueEligibleCount}`} />
@@ -250,15 +227,7 @@ export function PositionSummary({
   );
 }
 
-function Tile({
-  children,
-  last = false,
-  sx,
-}: {
-  children: React.ReactNode;
-  last?: boolean;
-  sx?: Record<string, unknown>;
-}) {
+function Tile({ children, last = false, sx }: { children: React.ReactNode; last?: boolean; sx?: Record<string, unknown> }) {
   return (
     <Box
       sx={{

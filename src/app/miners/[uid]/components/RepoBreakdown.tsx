@@ -73,12 +73,10 @@ export function RepoBreakdown({
   const [sortCol, setSortCol] = useState<SortCol>('earning');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [pageSize, setPageSize] = useState(15);
-
   useEffect(() => {
     const validKeys = (mode === 'oss' ? SORT_OPTIONS_OSS : SORT_OPTIONS_DISC).map((o) => o.key);
     if (!validKeys.includes(sortCol)) setSortCol('earning');
   }, [mode, sortCol]);
-
   const sorted = useMemo(() => {
     function recentOf(r: RepoBucket): number {
       let latest = 0;
@@ -95,9 +93,7 @@ export function RepoBreakdown({
       }
       return latest;
     }
-    function solvedDisplay(r: RepoBucket): number {
-      return r.solvedIssue + r.completedIssue;
-    }
+    function solvedDisplay(r: RepoBucket): number { return r.solvedIssue + r.completedIssue; }
     function valueOf(r: RepoBucket, col: SortCol): number {
       if (col === 'recent') return recentOf(r);
       if (mode === 'oss') {
@@ -139,13 +135,7 @@ export function RepoBreakdown({
       return sortDir === 'desc' ? -cmp : cmp;
     });
   }, [repos, sortCol, sortDir, mode, repoEvalMap]);
-
-  const { search, setSearch, page, setPage, filtered, paged } = useSearchPage(
-    sorted,
-    (r, q) => r.repo.toLowerCase().includes(q),
-    pageSize,
-  );
-
+  const { search, setSearch, page, setPage, filtered, paged } = useSearchPage(sorted, (r, q) => r.repo.toLowerCase().includes(q), pageSize);
   const ossEarnScale = useMemo(() => {
     const eligibleRaw = repos.reduce((s, r) => s + (repoEvalMap.get(r.repo.toLowerCase())?.isEligible ? r.predictedUsd : 0), 0);
     return eligibleRaw > 0 ? ossEarningPerDay / eligibleRaw : 0;
@@ -158,20 +148,17 @@ export function RepoBreakdown({
     const totalSolved = repos.reduce((s, r) => s + (repoEvalMap.get(r.repo.toLowerCase())?.isIssueEligible ? r.solvedIssue : 0), 0);
     return totalSolved > 0 ? issueDiscoveryScore / totalSolved : 0;
   }, [repos, issueDiscoveryScore, repoEvalMap]);
-
   const earningOf = useCallback((r: RepoBucket) => {
     const e = repoEvalMap.get(r.repo.toLowerCase());
     if (mode === 'oss')   return e?.isEligible      ? r.predictedUsd * ossEarnScale : 0;
     if (mode === 'discovery') return e?.isIssueEligible ? r.solvedIssue  * discEarnScale : 0;
     return 0;
   }, [mode, ossEarnScale, discEarnScale, repoEvalMap]);
-
   const totalEarn = useMemo(() => {
     let s = 0;
     for (const r of repos) s += earningOf(r);
     return s;
   }, [repos, earningOf]);
-
   const sums = useMemo(() => {
     let merged = 0, open = 0, closed = 0, scoreSum = 0, earnSum = 0;
     let solved = 0, valid = 0;
@@ -194,11 +181,9 @@ export function RepoBreakdown({
     if (mode === 'discovery') scoreSum = issueDiscoveryScore;
     return { merged, solved, valid, open, closed, scoreSum, earnSum, additions, deletions };
   }, [repos, repoEvalMap, mode, ossEarnScale, discEarnScale, issueDiscoveryScore]);
-
   if (repos.length === 0) {
     return <EmptyState icon={<RepoIcon size={20} />} text="No repository activity in this window." />;
   }
-
   function toggleSort(col: SortCol) {
     if (col === sortCol) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -208,9 +193,7 @@ export function RepoBreakdown({
     }
     setPage(0);
   }
-
   const primaryLabel = mode === 'oss' ? 'Merged' : 'Solved';
-
   return (
     <Card>
       <CardHeader
@@ -227,16 +210,11 @@ export function RepoBreakdown({
               options={mode === 'oss' ? SORT_OPTIONS_OSS : SORT_OPTIONS_DISC}
               minWidth={130}
             />
-            <RowSizeSelector
-              value={pageSize}
-              onChange={(n) => { setPageSize(n); setPage(0); }}
-              showAll={false}
-            />
+            <RowSizeSelector value={pageSize} onChange={(n) => { setPageSize(n); setPage(0); }} showAll={false} />
             <SearchBox value={search} onChange={setSearch} placeholder="Filter repos…" />
           </>
         }
       />
-
       <Box sx={{ overflowX: ['visible', null, 'auto'] }}>
         <Box sx={{ minWidth: [0, null, 880] }}>
           <Box
@@ -280,7 +258,6 @@ export function RepoBreakdown({
             <RepoHdr active={sortCol === 'earning'} dir={sortDir} onClick={() => toggleSort('earning')}>$/Day</RepoHdr>
             <RepoHdr active={sortCol === 'score'} dir={sortDir} onClick={() => toggleSort('score')}>Score</RepoHdr>
           </Box>
-
           {paged.map((r) => (
             <RepoRow
               key={r.repo}
@@ -296,13 +273,11 @@ export function RepoBreakdown({
               periodLabel={periodLabel}
             />
           ))}
-
           {filtered.length === 0 && (
             <Box sx={{ py: 4, textAlign: 'center', color: 'fg.muted', fontSize: 0 }}>
               No repositories match “{search}”
             </Box>
           )}
-
           <Box
             as="button"
             onClick={() => onSelectRepo(null)}
@@ -328,9 +303,7 @@ export function RepoBreakdown({
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Text sx={{ ...LABEL, color: 'fg.muted' }}>{repos.length} repos</Text>
-              {selectedRepo && (
-                <Text sx={{ ...LABEL, color: 'accent.fg' }}>· show all</Text>
-              )}
+              {selectedRepo && (<Text sx={{ ...LABEL, color: 'accent.fg' }}>· show all</Text>)}
             </Box>
             <span />
             {}
@@ -348,16 +321,13 @@ export function RepoBreakdown({
                     −{formatCompactNum(sums.deletions)}
                   </Text>
                 </>
-              ) : (
-                <Text sx={{ ...MONO, fontSize: '11px', fontWeight: 700, color: 'fg.muted' }}>—</Text>
-              )}
+              ) : (<Text sx={{ ...MONO, fontSize: '11px', fontWeight: 700, color: 'fg.muted' }}>—</Text>)}
             </Box>
             <span />
             <SumNum v={sums.earnSum > 0 ? '100%' : '—'} />
             <SumNum v={sums.earnSum > 0 ? formatUsd(sums.earnSum, { style: 'compact' }) : '—'} tone="success" />
             <SumNum v={sums.scoreSum > 0 ? sums.scoreSum.toFixed(2) : '—'} />
           </Box>
-
           <Box
             as="button"
             onClick={() => onSelectRepo(null)}
@@ -383,9 +353,7 @@ export function RepoBreakdown({
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
               <Text sx={{ ...LABEL, color: 'fg.muted' }}>{repos.length} repos</Text>
-              {selectedRepo && (
-                <Text sx={{ ...LABEL, color: 'accent.fg' }}>· show all</Text>
-              )}
+              {selectedRepo && (<Text sx={{ ...LABEL, color: 'accent.fg' }}>· show all</Text>)}
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               {sums.earnSum > 0 && (
@@ -414,20 +382,13 @@ export function RepoBreakdown({
           bg: 'canvas.subtle',
         }}
       >
-        <PageNav
-          page={page + 1}
-          pageSize={pageSize}
-          filteredCount={filtered.length}
-          onPage={(p) => setPage(p - 1)}
-        />
+        <PageNav page={page + 1} pageSize={pageSize} filteredCount={filtered.length} onPage={(p) => setPage(p - 1)} />
       </Box>
     </Card>
   );
 }
 
-function RepoHdr(props: ColumnHeaderProps) {
-  return <ColumnHeader px="4px" iconSize={9} {...props} />;
-}
+function RepoHdr(props: ColumnHeaderProps) { return <ColumnHeader px="4px" iconSize={9} {...props} />; }
 
 function SumNum({ v, tone = 'neutral' }: { v: number | string; tone?: 'neutral' | 'success' | 'danger' | 'done' }) {
   const fg = tone === 'success' ? 'success.fg' : tone === 'danger' ? 'danger.fg' : tone === 'done' ? 'done.fg' : 'fg.default';
@@ -475,7 +436,6 @@ function RepoRow({
       : deriveIssueActivity(row.discovered, row.solvedByPr, sparkDays),
     [row.prs, row.discovered, row.solvedByPr, mode, sparkDays],
   );
-
   const totalChanges = row.additions + row.deletions;
   const primaryCount = mode === 'oss' ? row.merged : row.solvedIssue + row.completedIssue;
   const primaryLabel = mode === 'oss' ? 'merged' : 'solved';
@@ -484,7 +444,6 @@ function RepoRow({
   const PrimaryIcon = mode === 'oss' ? GitMergeIcon : IssueClosedIcon;
   const OpenIcon = mode === 'oss' ? GitPullRequestIcon : IssueOpenedIcon;
   const ClosedIcon = mode === 'oss' ? GitPullRequestClosedIcon : SkipIcon;
-
   return (
     <Box
       role="button"
@@ -563,7 +522,6 @@ function RepoRow({
             </Box>
           </Link>
         </Box>
-
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', pl: '20px' }}>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <RepoActivitySpark values={daily} mode={mode} periodLabel={periodLabel} />
@@ -574,14 +532,12 @@ function RepoRow({
             </Text>
           )}
         </Box>
-
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', pl: '20px' }}>
           <MobileCountStat icon={<PrimaryIcon size={11} />} value={primaryCount} label={primaryLabel} tone="done" />
           <MobileCountStat icon={<CheckCircleIcon size={11} />} value={validCount} label="valid" tone="accent" />
           <MobileCountStat icon={<OpenIcon size={11} />} value={openCount} label="open" tone="success" />
           <MobileCountStat icon={<ClosedIcon size={11} />} value={closedCount} label="closed" tone="danger" />
         </Box>
-
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', pl: '20px' }}>
           {mode === 'oss' && totalChanges > 0 && (
             <Box sx={{ display: 'inline-flex', alignItems: 'baseline', gap: '4px' }}
@@ -600,7 +556,6 @@ function RepoRow({
             </Text>
           )}
         </Box>
-
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap', pl: '20px' }}>
           <Text sx={{ ...MONO, fontSize: '10px', color: 'fg.muted' }}>
             earn <Box as="span" sx={{ ...MONO, fontWeight: 700, color: 'fg.default' }}>
@@ -608,10 +563,7 @@ function RepoRow({
             </Box>
           </Text>
           <Text sx={{ color: 'fg.subtle' }}>·</Text>
-          <Text
-            sx={{ ...MONO, fontSize: '11px', fontWeight: 700 }}
-            style={{ color: earning > 0 ? 'var(--success-fg)' : 'var(--fg-muted)' }}
-          >
+          <Text sx={{ ...MONO, fontSize: '11px', fontWeight: 700 }} style={{ color: earning > 0 ? 'var(--success-fg)' : 'var(--fg-muted)' }} >
             {earning > 0 ? `${formatUsd(earning, { style: 'compact' })}/d` : '—'}
           </Text>
           <Text sx={{ color: 'fg.subtle' }}>·</Text>
@@ -622,17 +574,7 @@ function RepoRow({
           </Text>
         </Box>
       </Box>
-
-      <Box
-        sx={{
-          display: ['none', null, 'grid'],
-          gridTemplateColumns: REPO_COLS,
-          alignItems: 'center',
-          columnGap: 1,
-          px: 2,
-          py: '8px',
-        }}
-      >
+      <Box sx={{ display: ['none', null, 'grid'], gridTemplateColumns: REPO_COLS, alignItems: 'center', columnGap: 1, px: 2, py: '8px', }} >
       {}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, pr: 1 }}>
         <Link
@@ -699,11 +641,9 @@ function RepoRow({
           )}
         </Box>
       </Box>
-
       <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, pr: '4px' }}>
         <RepoActivitySpark values={daily} mode={mode} periodLabel={periodLabel} />
       </Box>
-
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', minWidth: 0, pr: '4px' }}>
         <CountCell
           icon={mode === 'oss' ? <GitMergeIcon size={11} /> : <IssueClosedIcon size={11} />}
@@ -738,7 +678,6 @@ function RepoRow({
           title={mode === 'oss' ? 'Closed (unmerged) PRs' : 'Closed (not-planned) issues'}
         />
       </Box>
-
       <Box
         sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px', minWidth: 0, pr: '4px', lineHeight: 1 }}
         title={mode === 'oss' && (row.additions + row.deletions) > 0
@@ -754,13 +693,9 @@ function RepoRow({
               −{formatCompactNum(row.deletions)}
             </Text>
           </>
-        ) : (
-          <Text sx={{ ...MONO, fontSize: '11px', color: 'fg.subtle' }}>—</Text>
-        )}
+        ) : (<Text sx={{ ...MONO, fontSize: '11px', color: 'fg.subtle' }}>—</Text>)}
       </Box>
-
       <NumCell v={credPct != null ? `${credPct}%` : '—'} />
-
       <NumCell v={share > 0 ? `${Math.round(share * 100)}%` : '—'} />
       <NumCell v={earning > 0 ? formatUsd(earning, { style: 'compact' }) : '—'} tone="success" bold />
       <NumCell v={score > 0 ? score.toFixed(2) : '—'} />
@@ -769,14 +704,7 @@ function RepoRow({
   );
 }
 
-function MobileCountStat({
-  icon, value, label, tone,
-}: {
-  icon: React.ReactNode;
-  value: number;
-  label: string;
-  tone: 'done' | 'accent' | 'success' | 'danger';
-}) {
+function MobileCountStat({ icon, value, label, tone }: { icon: React.ReactNode; value: number; label: string; tone: 'done' | 'accent' | 'success' | 'danger' }) {
   const empty = value === 0;
   const colorVar = empty
     ? 'var(--fg-muted)'
@@ -796,13 +724,7 @@ function MobileCountStat({
   );
 }
 
-function NumCell({
-  v, tone = 'neutral', bold = false,
-}: {
-  v: number | string;
-  tone?: 'neutral' | 'success' | 'danger' | 'done';
-  bold?: boolean;
-}) {
+function NumCell({ v, tone = 'neutral', bold = false }: { v: number | string; tone?: 'neutral' | 'success' | 'danger' | 'done'; bold?: boolean }) {
   const fg =
     tone === 'success' ? 'success.fg'
     : tone === 'danger'  ? 'danger.fg'
@@ -810,16 +732,7 @@ function NumCell({
     : 'fg.default';
   const empty = v === '—' || v === 0;
   return (
-    <Text
-      sx={{
-        ...MONO,
-        fontSize: '11px',
-        fontWeight: bold ? 700 : 600,
-        textAlign: 'right',
-        pr: '4px',
-        color: empty ? 'fg.muted' : fg,
-      }}
-    >
+    <Text sx={{ ...MONO, fontSize: '11px', fontWeight: bold ? 700 : 600, textAlign: 'right', pr: '4px', color: empty ? 'fg.muted' : fg, }} >
       {typeof v === 'number' ? v.toLocaleString() : v}
     </Text>
   );
@@ -876,13 +789,9 @@ function RepoActivitySpark({
   const itemLabel = mode === 'oss' ? 'PR' : 'issue';
   const windowLabel = periodLabel.toLowerCase();
   const strokeColor = mode === 'oss' ? 'var(--accent-fg)' : 'var(--done-fg)';
-
   if (cols === 0 || total === 0) {
-    return (
-      <Text sx={{ ...MONO, fontSize: '10px', color: 'fg.subtle' }} title={`No ${itemLabel} activity in the ${windowLabel} window`}>—</Text>
-    );
+    return <Text sx={{ ...MONO, fontSize: '10px', color: 'fg.subtle' }} title={`No ${itemLabel} activity in the ${windowLabel} window`}>—</Text>;
   }
-
   if (cols < 7) {
     const max = Math.max(...values);
     const title = `${total} ${itemLabel}${total === 1 ? '' : 's'} in the ${windowLabel} window`;
@@ -914,26 +823,13 @@ function RepoActivitySpark({
       </Box>
     );
   }
-
   const vbWidth = 100;
   const { last7, trendText } = summarizeTrend(values);
   const title = `${total} ${itemLabel}${total === 1 ? '' : 's'} in the ${windowLabel} window · ${last7} in the last 7d${trendText}`;
-
   const { linePoints, areaD } = computeSparklinePath(values, { width: vbWidth, height });
-
   return (
-    <Box
-      title={title}
-      aria-label={title}
-      sx={{ width: '100%', height, display: 'block' }}
-    >
-      <svg
-        width="100%"
-        height={height}
-        viewBox={`0 0 ${vbWidth} ${height}`}
-        preserveAspectRatio="none"
-        style={{ display: 'block', overflow: 'hidden' }}
-      >
+    <Box title={title} aria-label={title} sx={{ width: '100%', height, display: 'block' }} >
+      <svg width="100%" height={height} viewBox={`0 0 ${vbWidth} ${height}`} preserveAspectRatio="none" style={{ display: 'block', overflow: 'hidden' }} >
         <path d={areaD} fill={strokeColor} opacity={0.08} />
         <polyline
           points={linePoints}

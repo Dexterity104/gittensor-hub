@@ -32,9 +32,7 @@ export function Metric({
         minWidth: 0,
       }}
     >
-      {label && (
-        <Text sx={{ ...LABEL }}>{label}</Text>
-      )}
+      {label && (<Text sx={{ ...LABEL }}>{label}</Text>)}
       <Text
         sx={{
           ...MONO,
@@ -52,11 +50,7 @@ export function Metric({
       >
         {value}
       </Text>
-      {sub && (
-        <Text sx={{ fontSize: '10px', color: 'fg.subtle', ...ELLIPSIS, maxWidth: '100%' }}>
-          {sub}
-        </Text>
-      )}
+      {sub && (<Text sx={{ fontSize: '10px', color: 'fg.subtle', ...ELLIPSIS, maxWidth: '100%' }}> {sub} </Text>)}
     </Box>
   );
 }

@@ -65,23 +65,12 @@ export function HeroTile({
       >
         {value}
       </Text>
-      {sub && (
-        <Text sx={{ fontSize: '10px', color: 'fg.subtle', ...ELLIPSIS, }}>
-          {sub}
-        </Text>
-      )}
+      {sub && (<Text sx={{ fontSize: '10px', color: 'fg.subtle', ...ELLIPSIS, }}> {sub} </Text>)}
     </Box>
   );
 }
 
-export function CountBadge({
-  icon, value, label, tone = 'neutral',
-}: {
-  icon: React.ReactNode;
-  value: React.ReactNode;
-  label: string;
-  tone?: SummaryTone;
-}) {
+export function CountBadge({ icon, value, label, tone = 'neutral' }: { icon: React.ReactNode; value: React.ReactNode; label: string; tone?: SummaryTone }) {
   const empty = value === 0 || value === '0';
   return (
     <Box
@@ -97,23 +86,16 @@ export function CountBadge({
   );
 }
 
-export function useSearchPage<T>(
-  items: T[],
-  filter: (item: T, q: string) => boolean,
-  pageSize = 15,
-) {
+export function useSearchPage<T>(items: T[], filter: (item: T, q: string) => boolean, pageSize = 15) {
   const [search, setSearchRaw] = useState('');
   const [page, setPage] = useState(0);
   const setSearch = useCallback((s: string) => { setSearchRaw(s); setPage(0); }, []);
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return q ? items.filter((i) => filter(i, q)) : items;
-  }, [items, search]);
+  }, [items, search, filter]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pageCount - 1);
-  const paged = useMemo(
-    () => filtered.slice(safePage * pageSize, (safePage + 1) * pageSize),
-    [filtered, safePage, pageSize],
-  );
+  const paged = useMemo(() => filtered.slice(safePage * pageSize, (safePage + 1) * pageSize), [filtered, safePage, pageSize]);
   return { search, setSearch, page: safePage, setPage, pageCount, filtered, paged };
 }

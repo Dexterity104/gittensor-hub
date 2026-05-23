@@ -4,17 +4,7 @@ import React from 'react';
 import { Box } from '@primer/react';
 import { NOWRAP } from './tokens';
 
-export function Pill({
-  active,
-  onClick,
-  children,
-  size = 'sm',
-}: {
-  active?: boolean;
-  onClick?: () => void;
-  children: React.ReactNode;
-  size?: 'sm' | 'md';
-}) {
+export function Pill({ active, onClick, children, size = 'sm' }: { active?: boolean; onClick?: () => void; children: React.ReactNode; size?: 'sm' | 'md' }) {
   const pad = size === 'md' ? { px: '12px', py: '5px', fz: 1 } : { px: '10px', py: '3px', fz: 0 };
   return (
     <Box

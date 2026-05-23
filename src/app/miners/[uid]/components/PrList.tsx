@@ -18,13 +18,7 @@ import { DEFAULT_DECAY_PARAMS as DECAY_PARAMS, decayAt } from '../lib/decay';
 
 const PR_COLS = 'auto minmax(0, 1fr) 64px minmax(140px, 168px) 56px 148px 64px 72px 100px 100px 20px';
 
-export function PrList({
-  prs, loading, selectedRepo,
-}: {
-  prs: PrDetail[];
-  loading: boolean;
-  selectedRepo: string | null;
-}) {
+export function PrList({ prs, loading, selectedRepo }: { prs: PrDetail[]; loading: boolean; selectedRepo: string | null }) {
   const [modalPr, setModalPr] = useState<PrDetail | null>(null);
   const [pageSize, setPageSize] = useState(25);
   const { search, setSearch, page, setPage, filtered, paged: shown } = useSearchPage(
@@ -36,12 +30,10 @@ export function PrList({
     pageSize,
   );
   useEffect(() => { setPage(0); }, [prs, setPage]);
-
   if (loading) return <ListLoading label="Loading pull requests…" />;
   if (prs.length === 0) {
     return <EmptyState icon={<GitPullRequestIcon size={20} />} text="No pull requests in this window." />;
   }
-
   return (
     <>
       <Card>
@@ -51,11 +43,7 @@ export function PrList({
           sub={selectedRepo ?? `${prs.length} total`}
           right={
             <>
-              <RowSizeSelector
-                value={pageSize}
-                onChange={(n) => { setPageSize(n); setPage(0); }}
-                showAll={false}
-              />
+              <RowSizeSelector value={pageSize} onChange={(n) => { setPageSize(n); setPage(0); }} showAll={false} />
               <SearchBox value={search} onChange={setSearch} placeholder="Search PRs…" />
             </>
           }
@@ -86,9 +74,7 @@ export function PrList({
             <HdrLabel align="right">Opened</HdrLabel>
             <span />
           </Box>
-          {shown.map((pr) => (
-            <PrRow key={`${pr.repository}#${pr.pullRequestNumber}`} pr={pr} onOpen={() => setModalPr(pr)} />
-          ))}
+          {shown.map((pr) => (<PrRow key={`${pr.repository}#${pr.pullRequestNumber}`} pr={pr} onOpen={() => setModalPr(pr)} />))}
           {filtered.length === 0 && (
             <Box sx={{ py: 4, textAlign: 'center', color: 'fg.muted', fontSize: 0 }}>
               No pull requests match “{search}”
@@ -107,12 +93,7 @@ export function PrList({
             bg: 'canvas.subtle',
           }}
         >
-          <PageNav
-            page={page + 1}
-            pageSize={pageSize}
-            filteredCount={filtered.length}
-            onPage={(p) => setPage(p - 1)}
-          />
+          <PageNav page={page + 1} pageSize={pageSize} filteredCount={filtered.length} onPage={(p) => setPage(p - 1)} />
         </Box>
       </Card>
       {modalPr && <PrModal pr={modalPr} onClose={() => setModalPr(null)} />}
@@ -179,11 +160,7 @@ function PrSizeChip({
 }
 
 function HdrLabel({ children, align = 'right' }: { children: string; align?: 'left' | 'right' }) {
-  return (
-    <Text sx={{ ...LABEL, color: 'fg.muted', textAlign: align, px: '4px', userSelect: 'none' }}>
-      {children}
-    </Text>
-  );
+  return (<Text sx={{ ...LABEL, color: 'fg.muted', textAlign: align, px: '4px', userSelect: 'none' }}> {children} </Text>);
 }
 
 function DiffBar({ additions, deletions }: { additions: number; deletions: number }) {
@@ -257,7 +234,6 @@ function PrRow({ pr, onOpen }: { pr: PrDetail; onOpen: () => void }) {
   const absoluteDate = fmtAbsDate(pr.prState === 'MERGED' && pr.mergedAt ? pr.mergedAt : pr.prCreatedAt);
   const absoluteOpenedDate = fmtAbsDate(pr.prCreatedAt);
   const linkedIssues = parseLinkedIssues(pr.linkedIssues, pr.repository);
-
   const linkedIssueChips = linkedIssues.length > 0 && (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', mt: '2px', flexWrap: 'wrap', minWidth: 0 }}>
       <Text sx={{ fontSize: '10px', color: 'fg.subtle' }}>closes</Text>
@@ -299,7 +275,6 @@ function PrRow({ pr, onOpen }: { pr: PrDetail; onOpen: () => void }) {
       )}
     </Box>
   );
-
   const titleButton = (
     <Box
       as="button"
@@ -326,7 +301,6 @@ function PrRow({ pr, onOpen }: { pr: PrDetail; onOpen: () => void }) {
       {pr.title}
     </Box>
   );
-
   const githubLink = (
     <Box
       as="a"
@@ -340,14 +314,12 @@ function PrRow({ pr, onOpen }: { pr: PrDetail; onOpen: () => void }) {
       <LinkExternalIcon size={11} />
     </Box>
   );
-
   const diffNumbers = (
     <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '4px', ...MONO, fontSize: '10px' }}>
       <Text sx={{ color: 'success.fg' }}>+{pr.additions.toLocaleString()}</Text>
       <Text sx={{ color: 'danger.fg' }}>−{pr.deletions.toLocaleString()}</Text>
     </Box>
   );
-
   return (
     <Box
       sx={{
@@ -367,9 +339,7 @@ function PrRow({ pr, onOpen }: { pr: PrDetail; onOpen: () => void }) {
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '6px', minWidth: 0 }}>
               {titleButton}
-              {pr.label && (
-                <Label variant="default" sx={{ fontSize: '10px', flexShrink: 0 }}>{pr.label}</Label>
-              )}
+              {pr.label && (<Label variant="default" sx={{ fontSize: '10px', flexShrink: 0 }}>{pr.label}</Label>)}
             </Box>
             {linkedIssueChips}
           </Box>
@@ -400,10 +370,7 @@ function PrRow({ pr, onOpen }: { pr: PrDetail; onOpen: () => void }) {
             score <Box as="span" sx={{ ...MONO, fontWeight: 700, color: 'fg.default' }}>{scoreDisplay}</Box>
           </Text>
           <Text sx={{ color: 'fg.subtle' }}>·</Text>
-          <Text
-            sx={{ ...MONO, fontSize: '10px', fontWeight: 700 }}
-            style={{ color: pr.predictedUsdPerDay > 0 ? 'var(--success-fg)' : 'var(--fg-muted)' }}
-          >
+          <Text sx={{ ...MONO, fontSize: '10px', fontWeight: 700 }} style={{ color: pr.predictedUsdPerDay > 0 ? 'var(--success-fg)' : 'var(--fg-muted)' }} >
             {pr.predictedUsdPerDay > 0 ? `${formatUsd(pr.predictedUsdPerDay, { style: 'compact' })}/d` : '—'}
           </Text>
         </Box>
@@ -421,28 +388,14 @@ function PrRow({ pr, onOpen }: { pr: PrDetail; onOpen: () => void }) {
             opened {formatRelativeTime(pr.prCreatedAt)}
           </Text>
           {staleness && (
-            <Text
-              sx={{ ...MONO, fontSize: '9px', fontWeight: 700, letterSpacing: '0.3px', textTransform: 'uppercase' }}
-              style={{ color: staleness.color }}
-            >
+            <Text sx={{ ...MONO, fontSize: '9px', fontWeight: 700, letterSpacing: '0.3px', textTransform: 'uppercase' }} style={{ color: staleness.color }} >
               · {staleness.label}
             </Text>
           )}
         </Box>
       </Box>
-
       {}
-      <Box
-        sx={{
-          display: ['none', null, 'grid'],
-          gridTemplateColumns: PR_COLS,
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: '8px',
-          minHeight: 52,
-        }}
-      >
+      <Box sx={{ display: ['none', null, 'grid'], gridTemplateColumns: PR_COLS, alignItems: 'center', gap: 2, px: 3, py: '8px', minHeight: 52, }} >
         <Box sx={{ color: stateColor, display: 'inline-flex' }}>
           <StateIcon size={13} />
         </Box>
@@ -457,10 +410,7 @@ function PrRow({ pr, onOpen }: { pr: PrDetail; onOpen: () => void }) {
           <PrSizeChip additions={pr.additions} deletions={pr.deletions} />
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-          <Text
-            sx={{ ...MONO, fontSize: '10px', color: 'fg.muted', ...ELLIPSIS, minWidth: 0 }}
-            title={`${pr.repository}#${pr.pullRequestNumber}`}
-          >
+          <Text sx={{ ...MONO, fontSize: '10px', color: 'fg.muted', ...ELLIPSIS, minWidth: 0 }} title={`${pr.repository}#${pr.pullRequestNumber}`} >
             {pr.repository}#{pr.pullRequestNumber}
           </Text>
         </Box>
@@ -473,9 +423,7 @@ function PrRow({ pr, onOpen }: { pr: PrDetail; onOpen: () => void }) {
               <Box sx={{ color: 'fg.subtle', display: 'inline-flex' }}><GitCommitIcon size={10} /></Box>
               <Text sx={{ ...MONO, fontSize: '11px', color: 'fg.default', fontWeight: 600 }}>{pr.commitCount}</Text>
             </Box>
-          ) : (
-            <Text sx={{ ...MONO, fontSize: '11px', color: 'fg.subtle' }}>—</Text>
-          )}
+          ) : (<Text sx={{ ...MONO, fontSize: '11px', color: 'fg.subtle' }}>—</Text>)}
         </Box>
         <Box
           sx={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}
@@ -558,7 +506,6 @@ function PrModal({ pr, onClose }: { pr: PrDetail; onClose: () => void }) {
   const dateValue = pr.prState === 'MERGED' && pr.mergedAt ? formatRelativeTime(pr.mergedAt) : formatRelativeTime(pr.prCreatedAt);
   const titleId = useId();
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
-
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     closeBtnRef.current?.focus();
@@ -573,7 +520,6 @@ function PrModal({ pr, onClose }: { pr: PrDetail; onClose: () => void }) {
       previouslyFocused?.focus?.();
     };
   }, [onClose]);
-
   return (
     <Box
       sx={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: ['flex-end', null, 'center'], justifyContent: 'center', p: [0, null, 3] }}
@@ -641,7 +587,6 @@ function PrModal({ pr, onClose }: { pr: PrDetail; onClose: () => void }) {
             <XIcon size={12} />
           </Box>
         </Box>
-
         <Box sx={{ px: 3, py: 2, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', borderBottom: '1px solid', borderColor: 'border.muted' }}>
           <Metric label="Changes" value={
             <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
@@ -657,12 +602,10 @@ function PrModal({ pr, onClose }: { pr: PrDetail; onClose: () => void }) {
           <Metric label="Time decay" value={`${decayPct}%`} sub={decayPct >= 80 ? 'fresh' : decayPct >= 40 ? 'aging' : 'stale'} />
           <Metric label="State" value={pr.prState} sub={pr.prState === 'OPEN' ? 'in review' : pr.prState === 'MERGED' ? 'merged' : 'closed'} tone={pr.prState === 'MERGED' ? 'done' : pr.prState === 'OPEN' ? 'success' : 'danger'} />
         </Box>
-
         <Box sx={{ px: 3, pt: 2, pb: 1 }}>
           <Text sx={{ ...LABEL, mb: 1, display: 'block' }}>Time-decay curve</Text>
           <MiniDecayChart daysSinceCreated={daysSinceCreated} currentDecay={decayValue} />
         </Box>
-
         <Box sx={{ px: 3, py: 2, display: 'flex', justifyContent: 'center' }}>
           <Box
             as="a"
@@ -692,12 +635,8 @@ function MiniDecayChart({ daysSinceCreated, currentDecay }: { daysSinceCreated: 
   const innerH = VH - PT - PB;
   const DAYS = 30;
   const GRACE = DECAY_PARAMS.graceHours / 24;
-  function xScale(d: number): number {
-    return PL + Math.min(d / DAYS, 1) * innerW;
-  }
-  function yScale(v: number): number {
-    return PT + (1 - v) * innerH;
-  }
+  function xScale(d: number): number { return PL + Math.min(d / DAYS, 1) * innerW; }
+  function yScale(v: number): number { return PT + (1 - v) * innerH; }
   const N = 120;
   const pts: string[] = [];
   for (let i = 0; i <= N; i++) {
@@ -710,7 +649,6 @@ function MiniDecayChart({ daysSinceCreated, currentDecay }: { daysSinceCreated: 
   const nowX = xScale(nowDays);
   const nowY = yScale(Math.max(DECAY_PARAMS.floor, Math.min(1, currentDecay)));
   const xTicks = [0, 7, 14, 21, 30];
-
   return (
     <svg viewBox={`0 0 ${VW} ${VH}`} style={{ display: 'block', width: '100%', height: 'auto' }} aria-hidden>
       <rect x={PL} y={PT} width={innerW} height={innerH} fill="var(--bg-muted, #0d1117)" rx={3} />

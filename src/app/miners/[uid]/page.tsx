@@ -73,7 +73,6 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
   const [mode, setMode] = useState<Mode>('oss');
   const [copied, setCopied] = useState(false);
   const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
-
   const { data, isError } = useQuery<DetailResp>({
     queryKey: ['miner-detail', uid],
     queryFn: async () => {
@@ -85,12 +84,10 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
   });
-
   const miner = data?.miner;
   const isMe = miner?.githubUsername?.toLowerCase() === (me || '').toLowerCase();
   const isTracked = miner ? tracked.has(String(miner.uid)) : false;
   const periodDays = PERIODS.find((p) => p.key === period)?.days ?? null;
-
   const prs        = useMemo<DetailResp['prs']>(()             => data?.prs              ?? [], [data?.prs]);
   const discovered = useMemo<DetailResp['discoveredIssues']>(() => data?.discoveredIssues ?? [], [data?.discoveredIssues]);
   const solved     = useMemo<DetailResp['solvedIssues']>(()     => data?.solvedIssues     ?? [], [data?.solvedIssues]);
@@ -99,11 +96,9 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
     for (const e of data?.repoEvals ?? []) m.set(e.repo.toLowerCase(), e);
     return m;
   }, [data?.repoEvals]);
-
   const prsInPeriod    = useMemo(() => prs.filter((p) => withinPeriod(p.prCreatedAt, periodDays)), [prs, periodDays]);
   const discoveredInP  = useMemo(() => discovered.filter((i) => withinPeriod(i.createdAt, periodDays)), [discovered, periodDays]);
   const solvedInPeriod = useMemo(() => solved.filter((i) => withinPeriod(i.closedAt ?? i.createdAt, periodDays)), [solved, periodDays]);
-
   const heroAgg = useMemo(() => {
     let merged = 0, closedPr = 0, openPr = 0, additions = 0, deletions = 0;
     for (const p of prs) {
@@ -127,14 +122,8 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
     const totalIssues = solvedDisplay + closedIss + openIss;
     const ossDenom    = merged + closedPr;
     const discDenom   = solvedDisplay + closedIss;
-    let ossCred = 0;
-    if (ossDenom > 0) {
-      ossCred = merged / ossDenom;
-    }
-    let discCred = 0;
-    if (discDenom > 0) {
-      discCred = solvedDisplay / discDenom;
-    }
+    const ossCred = ossDenom > 0 ? merged / ossDenom : 0;
+    const discCred = discDenom > 0 ? solvedDisplay / discDenom : 0;
     return {
       merged, closedPr, additions, deletions,
       solved: solvedDisplay, closedIss, openIss,
@@ -142,7 +131,6 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
       ossCred, discCred,
     };
   }, [prs, discovered]);
-
   const prsFiltered = useMemo(
     () => selectedRepo ? prsInPeriod.filter((p) => p.repository.toLowerCase() === selectedRepo.toLowerCase()) : prsInPeriod,
     [prsInPeriod, selectedRepo],
@@ -151,7 +139,6 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
     () => selectedRepo ? discoveredInP.filter((i) => i.repo.toLowerCase() === selectedRepo.toLowerCase()) : discoveredInP,
     [discoveredInP, selectedRepo],
   );
-
   const repoBreakdown = useMemo(() => {
     const canonical = new Map<string, string>();
     function reg(name: string) {
@@ -165,10 +152,7 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
     for (const p of prsInPeriod) reg(p.repository);
     for (const i of discoveredInP) reg(i.repo);
     for (const i of solvedInPeriod) reg(i.repo);
-    function resolve(r: string): string {
-      return canonical.get(r.toLowerCase()) ?? r;
-    }
-
+    function resolve(r: string): string { return canonical.get(r.toLowerCase()) ?? r; }
     const map = new Map<string, RepoBucket>();
     function get(r: string): RepoBucket {
       const c = resolve(r);
@@ -210,13 +194,11 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
       return b.realScore - a.realScore;
     });
   }, [prsInPeriod, discoveredInP, solvedInPeriod, mode, data?.repoEvals]);
-
   useEffect(() => {
     if (!selectedRepo) return;
     const stillPresent = repoBreakdown.some((r) => r.repo.toLowerCase() === selectedRepo.toLowerCase());
     if (!stillPresent) setSelectedRepo(null);
   }, [repoBreakdown, selectedRepo]);
-
   const ossEligibleCount  = useMemo(() => repoBreakdown.filter(r => repoEvalMap.get(r.repo.toLowerCase())?.isEligible      === true).length, [repoBreakdown, repoEvalMap]);
   const discEligibleCount = useMemo(() => repoBreakdown.filter(r => repoEvalMap.get(r.repo.toLowerCase())?.isIssueEligible === true).length, [repoBreakdown, repoEvalMap]);
   const uniqueEligibleCount = useMemo(
@@ -226,12 +208,10 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
     }).length,
     [repoBreakdown, repoEvalMap],
   );
-
   const ghNameStr = miner?.githubUsername || `uid-${uid}`;
   const ghAvatarUrl = `https://github.com/${ghNameStr}.png?size=160`;
   const ossEligible   = !!miner?.isEligible;
   const issueEligible = !!miner?.isIssueEligible;
-
   const usdPerDay = num(miner?.usdPerDay);
   const { oss: ossEarningPerDay, disc: discEarningPerDay } = splitEarnings(
     usdPerDay,
@@ -240,32 +220,21 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
     ossEligible,
     issueEligible,
   );
-
   const issueDiscoveryScore = num(miner?.issueDiscoveryScore);
   const totalSolvedEligible = useMemo(
-    () => repoBreakdown.reduce(
-      (s, r) => s + (repoEvalMap.get(r.repo.toLowerCase())?.isIssueEligible ? r.solvedIssue : 0),
-      0,
-    ),
+    () => repoBreakdown.reduce((s, r) => s + (repoEvalMap.get(r.repo.toLowerCase())?.isIssueEligible ? r.solvedIssue : 0), 0),
     [repoBreakdown, repoEvalMap],
   );
-  let discEarnScale = 0;
-  let discScoreScale = 0;
-  if (totalSolvedEligible > 0) {
-    discEarnScale = discEarningPerDay / totalSolvedEligible;
-    discScoreScale = issueDiscoveryScore / totalSolvedEligible;
-  }
-
+  const discEarnScale = totalSolvedEligible > 0 ? discEarningPerDay / totalSolvedEligible : 0;
+  const discScoreScale = totalSolvedEligible > 0 ? issueDiscoveryScore / totalSolvedEligible : 0;
   const prEarnScale = useMemo(() => {
     let sum = 0;
     for (const p of prs) {
       if (!withinPeriod(p.prCreatedAt, HERO_DAYS)) continue;
       if (repoEvalMap.get(p.repository.toLowerCase())?.isEligible) sum += p.predictedUsdPerDay;
     }
-    if (sum <= 0) return 0;
-    return ossEarningPerDay / sum;
+    return sum > 0 ? ossEarningPerDay / sum : 0;
   }, [prs, repoEvalMap, ossEarningPerDay]);
-
   const prsScaled = useMemo(
     () => prsFiltered.map((p) => ({
       ...p,
@@ -275,7 +244,6 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
     })),
     [prsFiltered, repoEvalMap, prEarnScale],
   );
-
   async function copyHotkey(): Promise<void> {
     if (!miner?.hotkey) return;
     try {
@@ -286,7 +254,6 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
       return;
     }
   }
-
   if (isError) {
     return (
       <PageLayout containerWidth="full" padding="normal">
@@ -297,22 +264,11 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
       </PageLayout>
     );
   }
-
   return (
     <PageLayout containerWidth="full" padding="normal">
       <PageLayout.Header>
         <BackLink />
-
-        <Box
-          sx={{
-            mt: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            bg: 'canvas.subtle',
-            overflow: 'hidden',
-          }}
-        >
+        <Box sx={{ mt: 2, border: '1px solid', borderColor: 'border.default', borderRadius: 2, bg: 'canvas.subtle', overflow: 'hidden', }} >
           <ProfileHero
             ghName={ghNameStr}
             ghAvatar={ghAvatarUrl}
@@ -325,7 +281,6 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
             onCopyHotkey={copyHotkey}
             prs={prs}
           />
-
           <PositionSummary
             loading={!miner}
             usdPerDay={usdPerDay}
@@ -355,19 +310,8 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
           />
         </Box>
       </PageLayout.Header>
-
       <PageLayout.Content>
-        <Box
-          sx={{
-            mt: [2, null, 3],
-            mb: [2, null, 3],
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 2,
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+        <Box sx={{ mt: [2, null, 3], mb: [2, null, 3], display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', justifyContent: 'space-between', }} >
           <Segmented<Mode>
             ariaLabel="Mode"
             options={[
@@ -384,7 +328,6 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
             onChange={setPeriod}
           />
         </Box>
-
         <Box sx={{ mb: 3 }}>
           <RepoBreakdown
             key={mode}
@@ -403,18 +346,10 @@ export default function MinerDetailPage(ctx: { params: Promise<{ uid: string }> 
             periodLabel={PERIODS.find((p) => p.key === period)?.label ?? period}
           />
         </Box>
-
-        {mode === 'oss' && (
-          <Box sx={{ mb: 3 }}>
-            <PrList prs={prsScaled} loading={!data} selectedRepo={selectedRepo} />
-          </Box>
-        )}
-
+        {mode === 'oss' && (<Box sx={{ mb: 3 }}> <PrList prs={prsScaled} loading={!data} selectedRepo={selectedRepo} /> </Box>)}
         {mode === 'discovery' && (
           <Box sx={{ mb: 3 }}>
-            {!data ? (
-              <ListLoading label="Loading issues…" />
-            ) : discoveredFiltered.length === 0 ? (
+            {!data ? (<ListLoading label="Loading issues…" />) : discoveredFiltered.length === 0 ? (
               <EmptyState
                 icon={<IssueOpenedIcon size={20} />}
                 text="No issue activity in this window."

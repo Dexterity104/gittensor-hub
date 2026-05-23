@@ -47,7 +47,6 @@ export default function MinersPage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [pageSize, setPageSize] = useState<number>(DEFAULT_ROWS);
   const [page, setPage] = useState(1);
-
   const { data, isLoading, isError } = useQuery<MinersResp>({
     queryKey: ['miners'],
     queryFn: async () => {
@@ -58,7 +57,6 @@ export default function MinersPage() {
     refetchInterval: 10_000,
     refetchIntervalInBackground: true,
   });
-
   const queryClient = useQueryClient();
   const prefetchMiner = useCallback((uid: number | string) => {
     void queryClient.prefetchQuery({
@@ -71,7 +69,6 @@ export default function MinersPage() {
       staleTime: 25_000,
     });
   }, [queryClient]);
-
   const ranksByUid = useMemo(() => {
     const map = new Map<number, number>();
     if (!data?.miners) return map;
@@ -81,7 +78,6 @@ export default function MinersPage() {
     sorted.forEach((m, i) => map.set(m.uid, i + 1));
     return map;
   }, [data]);
-
   const filtered = useMemo(() => {
     if (!data?.miners) return [];
     const q = query.trim().toLowerCase();
@@ -99,11 +95,8 @@ export default function MinersPage() {
       return true;
     });
   }, [data, query, eligibility, tracksOnly, tracked, repoFilter]);
-
   const sorted = useMemo(() => {
-    function combinedCred(m: Miner): number {
-      return credibilityFor(countsFor(m)).rate;
-    }
+    function combinedCred(m: Miner): number { return credibilityFor(countsFor(m)).rate; }
     function valueOf(m: Miner): number {
       switch (sortKey) {
         case 'score':    return combinedScore(m);
@@ -124,9 +117,7 @@ export default function MinersPage() {
         }
       }
     }
-    function eligibleOf(m: Miner): boolean {
-      return isAnyEligible(m);
-    }
+    function eligibleOf(m: Miner): boolean { return isAnyEligible(m); }
     return [...filtered].sort((a, b) => {
       const aE = eligibleOf(a), bE = eligibleOf(b);
       if (aE !== bE) return aE ? -1 : 1;
@@ -135,13 +126,10 @@ export default function MinersPage() {
       return sortDir === 'desc' ? -eff : eff;
     });
   }, [filtered, sortKey, sortDir, ranksByUid]);
-
   useEffect(() => { setPage(1); }, [query, eligibility, tracksOnly, sortKey, sortDir, pageSize, repoFilter]);
-
   const pageStart = pageSize === Infinity ? 0 : (page - 1) * pageSize;
   const pageEnd   = pageSize === Infinity ? sorted.length : pageStart + pageSize;
   const visible   = sorted.slice(pageStart, pageEnd);
-
   function onSort(k: SortKey) {
     if (k === sortKey) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -157,15 +145,12 @@ export default function MinersPage() {
   function onToggleSortDir() {
     setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
   }
-
   const loadingFirst = isLoading && !data;
-
   return (
     <PageLayout containerWidth="full" padding="normal">
       <PageLayout.Header>
         <Insights miners={data?.miners ?? []} loading={loadingFirst} />
       </PageLayout.Header>
-
       <PageLayout.Content>
         <Toolbar
           query={query}
@@ -186,18 +171,8 @@ export default function MinersPage() {
           onSortKey={onSortKey}
           onToggleSortDir={onToggleSortDir}
         />
-
         {isError ? (
-          <Box
-            sx={{
-              p: 3,
-              border: '1px solid',
-              borderColor: 'danger.emphasis',
-              borderRadius: 2,
-              bg: 'canvas.subtle',
-              mt: 2,
-            }}
-          >
+          <Box sx={{ p: 3, border: '1px solid', borderColor: 'danger.emphasis', borderRadius: 2, bg: 'canvas.subtle', mt: 2, }} >
             <Text sx={{ color: 'danger.fg' }}>Failed to load miners.</Text>
           </Box>
         ) : (

@@ -53,43 +53,23 @@ export function ActivitySummary({
   period: Period;
 }) {
   const periodLabel = PERIOD_LABEL[period];
-
   if (mode === 'oss') {
     const mergeRate = ratePct(prAgg.merged, prAgg.total);
     const earning = prAgg.predictedUsd > 0 ? formatUsd(prAgg.predictedUsd, { style: 'compact' }) : '—';
     const score   = prAgg.realScoreSum > 0 ? prAgg.realScoreSum.toFixed(2) : '—';
-
     return (
       <Card>
-        <CardHeader
-          icon={<GitPullRequestIcon size={13} />}
-          title="Activity"
-          sub={`OSS · ${periodLabel}`}
-        />
+        <CardHeader icon={<GitPullRequestIcon size={13} />} title="Activity" sub={`OSS · ${periodLabel}`} />
         <Box sx={{ display: 'flex', alignItems: 'stretch', bg: 'canvas.default', borderBottom: '1px solid', borderColor: 'border.muted' }}>
-          <HeroTile
-            label="PRs"
-            value={prAgg.total.toLocaleString()}
-            sub={`${prAgg.uniqueRepos} repo${prAgg.uniqueRepos === 1 ? '' : 's'}`}
-          />
+          <HeroTile label="PRs" value={prAgg.total.toLocaleString()} sub={`${prAgg.uniqueRepos} repo${prAgg.uniqueRepos === 1 ? '' : 's'}`} />
           <HeroTile
             label="Merge rate"
             value={prAgg.total > 0 ? `${mergeRate}%` : '—'}
             sub={prAgg.total > 0 ? `${prAgg.merged} of ${prAgg.total}` : '—'}
             tone="done"
           />
-          <HeroTile
-            label="Score"
-            value={score}
-            sub={ossEligible ? 'window · live' : 'ineligible'}
-          />
-          <HeroTile
-            label="Earning"
-            value={earning}
-            sub="predicted / day"
-            tone={prAgg.predictedUsd > 0 ? 'success' : 'neutral'}
-            last
-          />
+          <HeroTile label="Score" value={score} sub={ossEligible ? 'window · live' : 'ineligible'} />
+          <HeroTile label="Earning" value={earning} sub="predicted / day" tone={prAgg.predictedUsd > 0 ? 'success' : 'neutral'} last />
         </Box>
         <Box sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
           <CountBadge icon={<RepoIcon size={11} />}                  value={prAgg.uniqueRepos} label="repos"  tone="accent" />
@@ -100,7 +80,6 @@ export function ActivitySummary({
       </Card>
     );
   }
-
   const useTotals = period === 'ALL';
   const totalIssues = useTotals
     ? (miner?.totalSolvedIssues ?? 0) + (miner?.totalOpenIssues ?? 0) + (miner?.totalClosedIssues ?? 0)
@@ -109,14 +88,9 @@ export function ActivitySummary({
   const openDisplay   = useTotals ? (miner?.totalOpenIssues   ?? 0) : issueAgg.open;
   const closedDisplay = useTotals ? (miner?.totalClosedIssues ?? 0) : issueAgg.closed;
   const solveRate = ratePct(solvedDisplay, totalIssues);
-
   return (
     <Card>
-      <CardHeader
-        icon={<IssueOpenedIcon size={13} />}
-        title="Activity"
-        sub={`Discovery · ${periodLabel}`}
-      />
+      <CardHeader icon={<IssueOpenedIcon size={13} />} title="Activity" sub={`Discovery · ${periodLabel}`} />
       <Box sx={{ display: 'flex', alignItems: 'stretch', bg: 'canvas.default', borderBottom: '1px solid', borderColor: 'border.muted' }}>
         <HeroTile
           label="Issues"
@@ -134,13 +108,7 @@ export function ActivitySummary({
           value={issueScore > 0 ? issueScore.toFixed(2) : '—'}
           sub={issueScore > 0 ? 'discovery' : issueEligible ? 'no emission' : 'ineligible'}
         />
-        <HeroTile
-          label="Author solved"
-          value={issueAgg.solvedExternal.toLocaleString()}
-          sub="by you"
-          tone="accent"
-          last
-        />
+        <HeroTile label="Author solved" value={issueAgg.solvedExternal.toLocaleString()} sub="by you" tone="accent" last />
       </Box>
       <Box sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
         <CountBadge icon={<RepoIcon size={11} />}        value={issueAgg.uniqueRepos} label="repos"  tone="accent" />

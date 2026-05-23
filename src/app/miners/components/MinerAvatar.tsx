@@ -4,13 +4,7 @@ import React from 'react';
 import type { Miner } from './types';
 import { ghAvatar, ghName } from './helpers';
 
-export function MinerAvatar({
-  miner,
-  size,
-}: {
-  miner: Pick<Miner, 'githubUsername' | 'uid'>;
-  size: number;
-}) {
+export function MinerAvatar({ miner, size }: { miner: Pick<Miner, 'githubUsername' | 'uid'>; size: number }) {
   return (
     /* eslint-disable-next-line @next/next/no-img-element */
     <img
