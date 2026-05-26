@@ -1,86 +1,97 @@
-/* Linear-inspired palette + base styles. Both schemes ride on CSS custom
+/* Vercel-style neutral palette + base styles. Pure grayscale surfaces with
+ * a single sharp blue accent (#0070f3). Both schemes ride on CSS custom
  * properties so existing `var(--bg-canvas)` callers pick up the new look. */
 
 :root,
 [data-theme='dark'] {
-  /* Surfaces (near-black with subtle steps for hierarchy) */
-  --bg-canvas: #08090a;
-  --bg-subtle: #101113;
-  --bg-inset: #050506;
-  --bg-emphasis: #1c1d20;
-  --bg-overlay: #1c1d20;
-  /* Top-nav header bar — a neutral (non-blue) dark, distinct from the canvas. */
-  --header-bg: #0a0a0a;
+  /* Surfaces — pure neutral, no blue cast. Stepped for hierarchy. */
+  --bg-canvas: #000000;
+  --bg-subtle: #0a0a0a;
+  --bg-inset: #050505;
+  --bg-emphasis: #1a1a1a;
+  --bg-overlay: #0f0f0f;
+  /* Header bar matches canvas for a seamless edge in top-nav mode. */
+  --header-bg: #000000;
 
-  /* Borders — minimal, almost invisible at rest */
-  --border-default: #23252a;
-  --border-muted: #1a1c1f;
-  --border-subtle: rgba(255, 255, 255, 0.04);
-  --border-strong: #3a3d44;
+  /* Borders — neutral greys, near-invisible at rest, firmer at strong */
+  --border-default: #262626;
+  --border-muted: #171717;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-strong: #404040;
 
   /* Foreground (text) */
-  --fg-default: #f7f8f8;
-  --fg-muted: #b4bcd0;
-  --fg-subtle: #8a8f98;
+  --fg-default: #fafafa;
+  --fg-muted: #a3a3a3;
+  --fg-subtle: #737373;
   --fg-on-emphasis: #ffffff;
 
-  /* Accent — Linear's signature indigo */
-  --accent-fg: #b4bdff;
-  --accent-emphasis: #5e6ad2;
-  --accent-glow: rgba(94, 106, 210, 0.32);
-  --accent-muted: rgba(94, 106, 210, 0.40);
+  /* Accent — single sharp blue (Vercel #0070f3), used sparingly */
+  --accent-fg: #3291ff;
+  --accent-emphasis: #0070f3;
+  --accent-glow: rgba(0, 112, 243, 0.32);
+  --accent-muted: rgba(0, 112, 243, 0.40);
 
-  /* State colors */
-  --success-fg: #4cb782;
-  --success-emphasis: #3fa672;
-  --success-muted: rgba(76, 183, 130, 0.40);
-  --attention-fg: #f2c94c;
-  --attention-emphasis: #e0b53d;
-  --attention-muted: rgba(242, 201, 76, 0.38);
-  --danger-fg: #eb5757;
-  --danger-emphasis: #d63b3b;
-  --danger-muted: rgba(235, 87, 87, 0.40);
-  --done-fg: #a584ff;
-  --done-emphasis: #8866ee;
-  --done-muted: rgba(165, 132, 255, 0.40);
-  --severe-fg: #f2994a;
-  --severe-emphasis: #e0823d;
-  --severe-subtle: rgba(242, 153, 74, 0.14);
-  --severe-muted: rgba(242, 153, 74, 0.40);
+  /* State colors — refined, less candy, modern Tailwind-derived */
+  --success-fg: #34d399;
+  --success-emphasis: #10b981;
+  --success-muted: rgba(16, 185, 129, 0.40);
+  --attention-fg: #fbbf24;
+  --attention-emphasis: #f59e0b;
+  --attention-muted: rgba(245, 158, 11, 0.40);
+  --danger-fg: #f87171;
+  --danger-emphasis: #ef4444;
+  --danger-muted: rgba(239, 68, 68, 0.40);
+  --done-fg: #a78bfa;
+  --done-emphasis: #8b5cf6;
+  --done-muted: rgba(139, 92, 246, 0.40);
+  --severe-fg: #fb923c;
+  --severe-emphasis: #f97316;
+  --severe-subtle: rgba(249, 115, 22, 0.14);
+  --severe-muted: rgba(249, 115, 22, 0.40);
 
-  /* Menu / list hover surface — Linear uses a very subtle tint, no full bg fill */
-  --menu-item-hover-bg: rgba(94, 106, 210, 0.12);
-  --menu-item-hover-fg: #f7f8f8;
-  --selected-check: #4cb782;
+  /* Medal accents for the miners podium — silver (#2) and bronze (#3).
+   * Gold (#1) reuses --attention-*. Silver shifted to pure neutral grey
+   * to stay consistent with the no-blue-cast surface palette. */
+  --silver-fg: #d4d4d8;
+  --silver-emphasis: #a1a1aa;
+  --silver-subtle: rgba(161, 161, 170, 0.18);
+  --bronze-fg: #fb923c;
+  --bronze-emphasis: #c2410c;
+  --bronze-subtle: rgba(194, 65, 12, 0.18);
 
-  /* Shadows — minimal; Linear leans on borders + bg shifts instead */
-  --shadow-overlay: 0 16px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-default);
+  /* Menu / list hover surface — neutral white wash, no accent tint */
+  --menu-item-hover-bg: rgba(255, 255, 255, 0.06);
+  --menu-item-hover-fg: #fafafa;
+  --selected-check: #10b981;
+
+  /* Shadows — deeper edges to define cards against the pure-black canvas */
+  --shadow-overlay: 0 16px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border-default);
   /* Leftward shadow for slide-in side panels; theme-aware. */
-  --shadow-panel-overlay: -16px 0 32px rgba(0, 0, 0, 0.45);
+  --shadow-panel-overlay: -16px 0 32px rgba(0, 0, 0, 0.55);
 
   /* Semantic state tints. Kept in sync with `linear-theme.ts`. */
-  --accent-subtle: rgba(94, 106, 210, 0.16);
-  --success-subtle: rgba(76, 183, 130, 0.16);
-  --attention-subtle: rgba(242, 201, 76, 0.14);
-  --attention-subtle-strong: rgba(242, 201, 76, 0.22);
-  --danger-subtle: rgba(235, 87, 87, 0.14);
-  --done-subtle: rgba(165, 132, 255, 0.14);
-  --neutral-emphasis-plus: #3a3d44;
+  --accent-subtle: rgba(0, 112, 243, 0.14);
+  --success-subtle: rgba(16, 185, 129, 0.14);
+  --attention-subtle: rgba(245, 158, 11, 0.14);
+  --attention-subtle-strong: rgba(245, 158, 11, 0.22);
+  --danger-subtle: rgba(239, 68, 68, 0.14);
+  --done-subtle: rgba(139, 92, 246, 0.14);
+  --neutral-emphasis-plus: #404040;
   --neutral-muted: rgba(255, 255, 255, 0.06);
   --neutral-subtle: rgba(255, 255, 255, 0.03);
-  --neutral-emphasis: #2a2c30;
-  --bottom-nav-bg: rgba(16, 17, 19, 0.96);
-  --bottom-nav-shadow: 0 -12px 28px rgba(0, 0, 0, 0.35);
+  --neutral-emphasis: #262626;
+  --bottom-nav-bg: rgba(10, 10, 10, 0.96);
+  --bottom-nav-shadow: 0 -12px 28px rgba(0, 0, 0, 0.45);
   /* Skeleton placeholders need stronger contrast than --bg-subtle gives —
    * those bgs are within 8 RGB units of canvas and read as solid black. */
-  --skeleton-base: rgba(255, 255, 255, 0.05);
-  --skeleton-shine: rgba(255, 255, 255, 0.13);
+  --skeleton-base: rgba(255, 255, 255, 0.04);
+  --skeleton-shine: rgba(255, 255, 255, 0.10);
 
   /* Primer v37 <Button> reads these CSS vars directly, not the React theme. */
-  --button-primary-bgColor-rest: #5e6ad2;
-  --button-primary-bgColor-hover: #6e79de;
-  --button-primary-bgColor-active: #4b56b9;
-  --button-primary-bgColor-disabled: rgba(94, 106, 210, 0.40);
+  --button-primary-bgColor-rest: #0070f3;
+  --button-primary-bgColor-hover: #1a85ff;
+  --button-primary-bgColor-active: #0061d5;
+  --button-primary-bgColor-disabled: rgba(0, 112, 243, 0.40);
   --button-primary-fgColor-rest: #ffffff;
   --button-primary-fgColor-disabled: rgba(255, 255, 255, 0.65);
   --button-primary-borderColor-rest: transparent;
@@ -88,8 +99,8 @@
   --button-primary-borderColor-disabled: transparent;
   --button-primary-shadow-selected: inset 0 0 0 transparent;
   /* Accent — used by Primer for links and active states */
-  --fgColor-accent: #b4bdff;
-  --bgColor-accent-emphasis: #5e6ad2;
+  --fgColor-accent: #3291ff;
+  --bgColor-accent-emphasis: #0070f3;
   /* Route Primer's BaseStyles wrapper through Inter; without this, every
    * element inside <BaseStyles> falls back to the system font stack. */
   --BaseStyles-fontFamily: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -97,10 +108,10 @@
 
 :root,
 [data-theme='dark'] {
-  /* Primary action button — flat indigo, no gradient */
-  --btn-primary-bg: #5e6ad2;
-  --btn-primary-hover-bg: #6e79de;
-  --btn-primary-active-bg: #4b56b9;
+  /* Primary action button — flat sharp blue, no gradient */
+  --btn-primary-bg: #0070f3;
+  --btn-primary-hover-bg: #1a85ff;
+  --btn-primary-active-bg: #0061d5;
   --btn-primary-border: transparent;
   --btn-primary-fg: #ffffff;
   --btn-primary-shadow: 0 1px 0 rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -108,89 +119,98 @@
 
 [data-theme='light'] {
   --bg-canvas: #ffffff;
-  --bg-subtle: #f9fafb;
-  --bg-inset: #f4f5f7;
-  --bg-emphasis: #ebebed;
+  --bg-subtle: #fafafa;
+  --bg-inset: #f5f5f5;
+  --bg-emphasis: #ededed;
   --bg-overlay: #ffffff;
   --header-bg: #ffffff;
 
-  --border-default: #e6e6e8;
-  --border-muted: #efeff1;
-  --border-subtle: rgba(0, 0, 0, 0.04);
-  --border-strong: #c2c3c9;
+  --border-default: #e5e5e5;
+  --border-muted: #ededed;
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-strong: #d4d4d4;
 
-  --fg-default: #161617;
-  --fg-muted: #4a4d54;
-  /* Bumped from #8a8f98 → #6b7280 so subtle text on white hits WCAG AA (≥4.5:1). */
-  --fg-subtle: #6b7280;
+  --fg-default: #0a0a0a;
+  --fg-muted: #525252;
+  /* #737373 on white = 4.55:1 — passes WCAG AA. */
+  --fg-subtle: #737373;
   --fg-on-emphasis: #ffffff;
 
-  --accent-fg: #5e6ad2;
-  --accent-emphasis: #5e6ad2;
-  --accent-glow: rgba(94, 106, 210, 0.22);
-  --accent-muted: rgba(94, 106, 210, 0.32);
+  /* Accent — same hue, slightly darker fg for AA contrast on white. */
+  --accent-fg: #0061d5;
+  --accent-emphasis: #0070f3;
+  --accent-glow: rgba(0, 112, 243, 0.22);
+  --accent-muted: rgba(0, 112, 243, 0.32);
 
   /* Light-mode semantic fgs darkened so badges with subtle/strong tinted
-   * bgs still pass WCAG AA. Verified ≥5.85:1 on *-subtle@0.10 over white. */
-  --success-fg: #1a6943;
-  --success-emphasis: #1a6943;
-  --success-muted: rgba(26, 105, 67, 0.32);
-  --attention-fg: #7d5614;
-  --attention-emphasis: #7d5614;
-  --attention-muted: rgba(125, 86, 20, 0.32);
-  --danger-fg: #a72424;
-  --danger-emphasis: #a72424;
-  --danger-muted: rgba(167, 36, 36, 0.32);
-  --done-fg: #5635c3;
-  --done-emphasis: #5635c3;
-  --done-muted: rgba(86, 53, 195, 0.32);
-  --severe-fg: #c66628;
-  --severe-emphasis: #c66628;
-  --severe-subtle: rgba(198, 102, 40, 0.10);
-  --severe-muted: rgba(198, 102, 40, 0.32);
+   * bgs still pass WCAG AA. All ≥5.0:1 on white. */
+  --success-fg: #047857;
+  --success-emphasis: #047857;
+  --success-muted: rgba(4, 120, 87, 0.32);
+  --attention-fg: #92400e;
+  --attention-emphasis: #92400e;
+  --attention-muted: rgba(146, 64, 14, 0.32);
+  --danger-fg: #b91c1c;
+  --danger-emphasis: #b91c1c;
+  --danger-muted: rgba(185, 28, 28, 0.32);
+  --done-fg: #6d28d9;
+  --done-emphasis: #6d28d9;
+  --done-muted: rgba(109, 40, 217, 0.32);
+  --severe-fg: #c2410c;
+  --severe-emphasis: #c2410c;
+  --severe-subtle: rgba(194, 65, 12, 0.10);
+  --severe-muted: rgba(194, 65, 12, 0.32);
 
-  --menu-item-hover-bg: rgba(94, 106, 210, 0.08);
-  --menu-item-hover-fg: #161617;
-  --selected-check: #2a8054;
+  /* Medal accents (light) — darker so they stay legible on white. */
+  --silver-fg: #525252;
+  --silver-emphasis: #525252;
+  --silver-subtle: rgba(82, 82, 82, 0.10);
+  --bronze-fg: #9a3412;
+  --bronze-emphasis: #9a3412;
+  --bronze-subtle: rgba(154, 52, 18, 0.10);
+
+  --menu-item-hover-bg: rgba(0, 0, 0, 0.05);
+  --menu-item-hover-fg: #0a0a0a;
+  --selected-check: #047857;
 
   --shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--border-default);
-  --shadow-panel-overlay: -16px 0 32px rgba(0, 0, 0, 0.10);
+  --shadow-panel-overlay: -16px 0 32px rgba(0, 0, 0, 0.08);
 
-  --btn-primary-bg: #5e6ad2;
-  --btn-primary-hover-bg: #4b56b9;
-  --btn-primary-active-bg: #4b56b9;
+  --btn-primary-bg: #0070f3;
+  --btn-primary-hover-bg: #0061d5;
+  --btn-primary-active-bg: #0061d5;
   --btn-primary-border: transparent;
   --btn-primary-fg: #ffffff;
   --btn-primary-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
 
   /* Light-mode semantic tints + Primer Button CSS-var overrides. */
-  --accent-subtle: rgba(94, 106, 210, 0.10);
-  --success-subtle: rgba(26, 105, 67, 0.10);
-  --attention-subtle: rgba(125, 86, 20, 0.10);
-  --attention-subtle-strong: rgba(125, 86, 20, 0.16);
-  --danger-subtle: rgba(167, 36, 36, 0.10);
-  --done-subtle: rgba(86, 53, 195, 0.10);
-  --neutral-emphasis-plus: #161617;
+  --accent-subtle: rgba(0, 112, 243, 0.08);
+  --success-subtle: rgba(4, 120, 87, 0.10);
+  --attention-subtle: rgba(146, 64, 14, 0.10);
+  --attention-subtle-strong: rgba(146, 64, 14, 0.16);
+  --danger-subtle: rgba(185, 28, 28, 0.10);
+  --done-subtle: rgba(109, 40, 217, 0.10);
+  --neutral-emphasis-plus: #0a0a0a;
   --neutral-muted: rgba(0, 0, 0, 0.06);
   --neutral-subtle: rgba(0, 0, 0, 0.03);
-  --neutral-emphasis: #4a4d54;
-  --bottom-nav-bg: rgba(249, 250, 251, 0.96);
-  --bottom-nav-shadow: 0 -10px 26px rgba(16, 24, 40, 0.10);
-  --skeleton-base: rgba(0, 0, 0, 0.05);
-  --skeleton-shine: rgba(0, 0, 0, 0.12);
+  --neutral-emphasis: #525252;
+  --bottom-nav-bg: rgba(250, 250, 250, 0.96);
+  --bottom-nav-shadow: 0 -10px 26px rgba(0, 0, 0, 0.08);
+  --skeleton-base: rgba(0, 0, 0, 0.04);
+  --skeleton-shine: rgba(0, 0, 0, 0.10);
 
-  --button-primary-bgColor-rest: #5e6ad2;
-  --button-primary-bgColor-hover: #4b56b9;
-  --button-primary-bgColor-active: #4b56b9;
-  --button-primary-bgColor-disabled: rgba(94, 106, 210, 0.32);
+  --button-primary-bgColor-rest: #0070f3;
+  --button-primary-bgColor-hover: #0061d5;
+  --button-primary-bgColor-active: #0061d5;
+  --button-primary-bgColor-disabled: rgba(0, 112, 243, 0.32);
   --button-primary-fgColor-rest: #ffffff;
   --button-primary-fgColor-disabled: rgba(255, 255, 255, 0.65);
   --button-primary-borderColor-rest: transparent;
   --button-primary-borderColor-hover: transparent;
   --button-primary-borderColor-disabled: transparent;
   --button-primary-shadow-selected: inset 0 0 0 transparent;
-  --fgColor-accent: #5e6ad2;
-  --bgColor-accent-emphasis: #5e6ad2;
+  --fgColor-accent: #0061d5;
+  --bgColor-accent-emphasis: #0070f3;
 }
 
 html,
@@ -528,7 +548,7 @@ select {
 }
 
 .gt-metric-chip--success {
-  border-color: rgba(76, 183, 130, 0.45);
+  border-color: var(--success-muted);
   background: var(--success-subtle);
   color: var(--success-fg);
 }
@@ -607,8 +627,8 @@ select {
 }
 
 @keyframes badgePulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 0 2px var(--bg-canvas), 0 0 0 0 rgba(235, 87, 87, 0.7); }
-  50% { transform: scale(1.05); box-shadow: 0 0 0 2px var(--bg-canvas), 0 0 0 6px rgba(235, 87, 87, 0); }
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 2px var(--bg-canvas), 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 2px var(--bg-canvas), 0 0 0 6px rgba(239, 68, 68, 0); }
 }
 
 /* ── Markdown rendering for issue / PR bodies ───────────────────────────── */

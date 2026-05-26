@@ -20,10 +20,10 @@ const palette = {
   muted: 'var(--fg-subtle)',
   muted2: 'var(--fg-muted)',
   accent: 'var(--accent-emphasis)',
-  accentSoft: 'var(--accent-subtle, rgba(94, 106, 210, 0.16))',
+  accentSoft: 'var(--accent-subtle, rgba(0, 112, 243, 0.14))',
   red: 'var(--danger-fg)',
-  redSoft: 'rgba(235, 87, 87, 0.14)',
-  redBorder: 'rgba(235, 87, 87, 0.32)',
+  redSoft: 'var(--danger-subtle, rgba(239, 68, 68, 0.14))',
+  redBorder: 'var(--danger-muted, rgba(239, 68, 68, 0.32))',
   shadow: 'var(--shadow-overlay, 0 24px 80px rgba(0, 0, 0, 0.45))',
 };
 

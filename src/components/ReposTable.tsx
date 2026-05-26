@@ -148,7 +148,7 @@ export default function ReposTable({
             borderRadius: '6px',
             border: '1px solid',
             borderColor: trackedOnly ? 'var(--attention-emphasis)' : 'var(--border-default)',
-            bg: trackedOnly ? 'var(--attention-subtle, rgba(242, 201, 76, 0.14))' : 'var(--bg-emphasis)',
+            bg: trackedOnly ? 'var(--attention-subtle, rgba(245, 158, 11, 0.14))' : 'var(--bg-emphasis)',
             color: trackedOnly ? 'var(--attention-emphasis)' : 'var(--fg-default)',
             cursor: 'pointer',
             fontSize: '14px',
@@ -332,7 +332,7 @@ function RepoRow({
       : band.tone === 'attention'
       ? 'var(--attention-emphasis)'
       : band.tone === 'severe'
-      ? '#e0823d'
+      ? 'var(--severe-emphasis)'
       : 'var(--neutral-emphasis)';
   const internalHref = `/repos/${repo.owner}/${repo.name}`;
   const githubHref = `https://github.com/${repo.fullName}`;

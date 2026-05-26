@@ -291,7 +291,7 @@ export default function IssuesTable() {
               borderRadius: '6px',
               border: '1px solid',
               borderColor: trackedOnly ? 'var(--attention-emphasis)' : 'var(--border-default)',
-              bg: trackedOnly ? 'var(--attention-subtle, rgba(242, 201, 76, 0.14))' : 'var(--bg-emphasis)',
+              bg: trackedOnly ? 'var(--attention-subtle, rgba(245, 158, 11, 0.14))' : 'var(--bg-emphasis)',
               color: trackedOnly ? 'var(--attention-emphasis)' : 'var(--fg-default)',
               cursor: 'pointer',
               fontSize: '14px',
